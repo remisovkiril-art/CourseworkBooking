@@ -1,7 +1,8 @@
 ﻿using Booking.Application.DTOs.RegistrationDTOs;
 using Booking.Application.Interfaces.Services;
-
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Booking.Api.Controllers;
 
@@ -52,5 +53,22 @@ public class AuthController : ControllerBase
                 refreshToken);
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+
+        if (string.IsNullOrEmpty(email))
+            return Unauthorized();
+
+        var profile = await _authService.GetProfileAsync(email);
+
+        if (profile == null)
+            return NotFound("Користувача не знайдено");
+
+        return Ok(profile);
     }
 }

@@ -42,6 +42,18 @@ public class Program
 
         builder.Services.AddSingleton(jwtSettings);
 
+        // ================= CORS =================
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.WithOrigins("http://localhost:5173")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            });
+        });
+
         // ================= AUTHENTICATION =================
 
         builder.Services
@@ -145,6 +157,8 @@ public class Program
         }
 
         // ================= MIDDLEWARE =================
+
+        app.UseCors("AllowFrontend");
 
         app.UseHttpsRedirection();
 
