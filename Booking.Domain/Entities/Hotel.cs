@@ -23,4 +23,6 @@ public class Hotel
 
     public ICollection<HotelAmenity> Amenities { get; set; }
         = new List<HotelAmenity>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
+
 }

@@ -20,4 +20,5 @@ public class User
 
     public ICollection<BookingEntity> Bookings { get; set; } = new List<BookingEntity>();
     public ICollection<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
 }
