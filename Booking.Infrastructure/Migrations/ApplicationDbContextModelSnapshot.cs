@@ -94,16 +94,9 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("MainImageUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<double>("Rating")
-                        .HasColumnType("float");
 
                     b.HasKey("Id");
 
@@ -128,6 +121,26 @@ namespace Booking.Infrastructure.Migrations
                     b.HasIndex("HotelId");
 
                     b.ToTable("HotelAmenities");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.HotelImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("HotelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.ToTable("HotelImages");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.PaymentMethod", b =>
@@ -162,6 +175,37 @@ namespace Booking.Infrastructure.Migrations
                     b.ToTable("PaymentMethods");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.Review", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("HotelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reviews");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.Room", b =>
                 {
                     b.Property<Guid>("Id")
@@ -172,8 +216,15 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("HotelId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
@@ -209,6 +260,9 @@ namespace Booking.Infrastructure.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -275,6 +329,17 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Hotel");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.HotelImage", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.Hotel", "Hotel")
+                        .WithMany("Images")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.PaymentMethod", b =>
                 {
                     b.HasOne("Booking.Domain.Entities.User", "User")
@@ -282,6 +347,25 @@ namespace Booking.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.Review", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.Hotel", "Hotel")
+                        .WithMany("Reviews")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Booking.Domain.Entities.User", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
 
                     b.Navigation("User");
                 });
@@ -301,6 +385,10 @@ namespace Booking.Infrastructure.Migrations
                 {
                     b.Navigation("Amenities");
 
+                    b.Navigation("Images");
+
+                    b.Navigation("Reviews");
+
                     b.Navigation("Rooms");
                 });
 
@@ -314,6 +402,8 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Bookings");
 
                     b.Navigation("PaymentMethods");
+
+                    b.Navigation("Reviews");
                 });
 #pragma warning restore 612, 618
         }

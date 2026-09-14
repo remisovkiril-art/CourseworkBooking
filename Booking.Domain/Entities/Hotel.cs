@@ -15,12 +15,12 @@ public class Hotel
 
     public string Description { get; set; } = string.Empty;
 
-    public double Rating { get; set; }
-
-    public string MainImageUrl { get; set; } = string.Empty;
-
     public ICollection<Room> Rooms { get; set; } = new List<Room>();
 
-    public ICollection<HotelAmenity> Amenities { get; set; }
-        = new List<HotelAmenity>();
+    public ICollection<HotelAmenity> Amenities { get; set; } = new List<HotelAmenity>();
+
+    public ICollection<HotelImage> Images { get; set; } = new List<HotelImage>();
+
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
 }
+

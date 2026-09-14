@@ -1,6 +1,7 @@
 ﻿using System;
 
 namespace Booking.Domain.Entities;
+
 public class PaymentMethod
 {
     public Guid Id { get; set; }

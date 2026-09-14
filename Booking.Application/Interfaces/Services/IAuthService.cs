@@ -1,12 +1,18 @@
-﻿using Booking.Application.DTOs.RegistrationDTOs;
+﻿using Booking.Application.DTOs.Auth;
 
 namespace Booking.Application.Interfaces.Services;
 
 public interface IAuthService
 {
-    Task<AuthResponseDto> RegisterAsync(RegisterDto dto);
+    Task<AuthResponseDto> RegisterAsync(
+        RegisterDto dto,
+        CancellationToken cancellationToken);
 
-    Task<AuthResponseDto> LoginAsync(LoginDto dto);
+    Task<AuthResponseDto> LoginAsync(
+        LoginDto dto,
+        CancellationToken cancellationToken);
 
-    Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
+    Task<AuthResponseDto> VerifyAsync(
+        VerifyCodeDto dto,
+        CancellationToken cancellationToken);
 }

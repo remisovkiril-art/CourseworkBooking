@@ -21,8 +21,6 @@ public class Program
 
         var configuration = builder.Configuration;
 
-        // ================= DATABASE =================
-
         builder.Services.AddDbContext<ApplicationDbContext>(
             options =>
             {
@@ -31,18 +29,21 @@ public class Program
                         "SqlServerConnection"));
             });
 
-        // ================= JWT SETTINGS =================
-
         var jwtSettings =
             configuration
                 .GetSection("Jwt")
                 .Get<JwtSettings>()
-            ?? throw new Exception(
-                "JWT settings not configured.");
+            ?? throw new Exception("JWT settings not configured.");
 
         builder.Services.AddSingleton(jwtSettings);
 
-        // ================= AUTHENTICATION =================
+        var emailSettings =
+            configuration
+                .GetSection("Email")
+                .Get<EmailSettings>()
+            ?? new EmailSettings();
+
+        builder.Services.AddSingleton(emailSettings);
 
         builder.Services
             .AddAuthentication(options =>
@@ -59,97 +60,96 @@ public class Program
                     new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-
                         ValidateAudience = true,
-
                         ValidateLifetime = true,
-
                         ValidateIssuerSigningKey = true,
-
-                        ValidIssuer =
-                            jwtSettings.Issuer,
-
-                        ValidAudience =
-                            jwtSettings.Audience,
-
+                        ValidIssuer = jwtSettings.Issuer,
+                        ValidAudience = jwtSettings.Audience,
                         IssuerSigningKey =
                             new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(
-                                    jwtSettings.Key)),
-
-                        ClockSkew =
-                            TimeSpan.Zero
+                                Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                        ClockSkew = TimeSpan.Zero
                     };
             });
 
-        // ================= AUTHORIZATION =================
-
         builder.Services.AddAuthorization();
 
-        // ================= CONTROLLERS =================
-
-        builder.Services.AddControllers();
-
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(options =>
+        builder.Services.AddCors(options =>
         {
-            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            options.AddPolicy("ReactPolicy", policy =>
             {
-                Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
-                BearerFormat = "JWT",
-                Name = "Authorization",
-                In = ParameterLocation.Header,
-                Description = "Enter JWT token"
-            });
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
+                policy
+                    .WithOrigins(
+                        "http://localhost:5173")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
 
-        // ================= REPOSITORIES =================
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
 
-        builder.Services.AddScoped<
-            IUserRepository,
-            UserRepository>();
+        builder.Services.AddSwaggerGen(options =>
+        {
+            options.AddSecurityDefinition("Bearer",
+                new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Description = "Enter JWT token"
+                });
 
-        // ================= SERVICES =================
+            options.AddSecurityRequirement(
+                new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+        });
 
-        builder.Services.AddScoped<
-            IAuthService,
-            AuthService>();
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+        builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+        builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+        builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+        builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 
-        builder.Services.AddScoped<
-            IJwtService,
-            JwtService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IEmailService, EmailService>();
+        builder.Services.AddScoped<IRoomService, RoomService>();
+        builder.Services.AddScoped<IJwtService, JwtService>();
+        builder.Services.AddScoped<IHotelService, HotelService>();
+        builder.Services.AddScoped<IReviewService, ReviewService>();
+        builder.Services.AddScoped<IBookingService, BookingService>();
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IImageService, ImageService>();
+
         var app = builder.Build();
-
-        // ================= SWAGGER =================
 
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
-
             app.UseSwaggerUI();
         }
+        app.UseStaticFiles();
 
-        // ================= MIDDLEWARE =================
-
-        app.UseHttpsRedirection();
+        app.UseCors("ReactPolicy");
 
         app.UseAuthentication();
-
         app.UseAuthorization();
 
         app.MapControllers();
