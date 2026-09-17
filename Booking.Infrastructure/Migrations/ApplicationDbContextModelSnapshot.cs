@@ -250,11 +250,9 @@ namespace Booking.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
@@ -265,7 +263,6 @@ namespace Booking.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
@@ -273,7 +270,6 @@ namespace Booking.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RefreshToken")
@@ -284,10 +280,9 @@ namespace Booking.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TravelPurpose")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("TravelingWithPet")
+                    b.Property<bool?>("TravelingWithPet")
                         .HasColumnType("bit");
 
                     b.Property<string>("VerificationCode")

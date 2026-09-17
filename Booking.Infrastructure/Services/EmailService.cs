@@ -24,7 +24,7 @@ public class EmailService : IEmailService
             string.IsNullOrWhiteSpace(_settings.Password) ||
             string.IsNullOrWhiteSpace(_settings.From))
         {
-            return;
+            throw new InvalidOperationException("Email settings are not configured.");
         }
 
         using var message = new MailMessage(
