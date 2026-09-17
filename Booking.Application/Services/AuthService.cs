@@ -29,8 +29,8 @@ public class AuthService : IAuthService
         RegisterDto dto,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new Exception("Name is required");
+        //if (string.IsNullOrWhiteSpace(dto.Name))
+        //    throw new Exception("Name is required");
 
         if (string.IsNullOrWhiteSpace(dto.Email))
             throw new Exception("Email is required");
@@ -50,9 +50,9 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Name = dto.Name,
+            //Name = dto.Name,
             Email = dto.Email,
-            Phone = dto.Phone,
+            //Phone = dto.Phone,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             VerificationCode = verificationCode,
             IsVerified = false
@@ -131,7 +131,6 @@ public class AuthService : IAuthService
             AccessToken = _jwtService.GenerateAccessToken(user),
             AccessTokenExpires = DateTime.UtcNow.AddMinutes(
                 _jwtSettings.AccessTokenMinutes),
-            Name = user.Name,
             Email = user.Email,
             RefreshToken = user.RefreshToken,
             VerificationCode = verificationCode
