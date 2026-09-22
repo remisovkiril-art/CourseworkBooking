@@ -6,7 +6,11 @@ using Booking.Application.Settings;
 using Booking.Infrastructure.Data;
 using Booking.Infrastructure.Repositories;
 using Booking.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -37,19 +41,14 @@ public class Program
 
         builder.Services.AddSingleton(jwtSettings);
 
-        var emailSettings =
-            configuration
-                .GetSection("Email")
-                .Get<EmailSettings>()
-            ?? new EmailSettings();
-
-        builder.Services.AddSingleton(emailSettings);
-
         builder.Services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme =
                     JwtBearerDefaults.AuthenticationScheme;
+
+                options.DefaultSignInScheme =
+                    CookieAuthenticationDefaults.AuthenticationScheme;
 
                 options.DefaultChallengeScheme =
                     JwtBearerDefaults.AuthenticationScheme;
@@ -59,17 +58,44 @@ public class Program
                 options.TokenValidationParameters =
                     new TokenValidationParameters
                     {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtSettings.Issuer,
-                        ValidAudience = jwtSettings.Audience,
+
                         IssuerSigningKey =
                             new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                                Encoding.UTF8.GetBytes(
+                                    configuration["Jwt:Key"]!)),
+
+                        ValidateIssuer = true,
+                        ValidIssuer = configuration["Jwt:Issuer"],
+
+                        ValidateAudience = true,
+                        ValidAudience = configuration["Jwt:Audience"],
+
+                        ValidateLifetime = true,
                         ClockSkew = TimeSpan.Zero
                     };
+            })
+            .AddCookie(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                options =>
+                {
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SecurePolicy =
+                        CookieSecurePolicy.SameAsRequest;
+                })
+            .AddGoogle(options =>
+            {
+                options.ClientId =
+                    configuration[
+                        "Authentication:Google:ClientId"]!;
+
+                options.ClientSecret =
+                    configuration[
+                        "Authentication:Google:ClientSecret"]!;
+
+                options.SignInScheme =
+                    CookieAuthenticationDefaults.AuthenticationScheme;
             });
 
         builder.Services.AddAuthorization();
@@ -88,11 +114,13 @@ public class Program
         });
 
         builder.Services.AddControllers();
+
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services.AddSwaggerGen(options =>
         {
-            options.AddSecurityDefinition("Bearer",
+            options.AddSecurityDefinition(
+                "Bearer",
                 new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
@@ -109,11 +137,13 @@ public class Program
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
+                            Reference =
+                                new OpenApiReference
+                                {
+                                    Type =
+                                        ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
                         },
                         Array.Empty<string>()
                     }
@@ -126,10 +156,9 @@ public class Program
         builder.Services.AddScoped<IBookingRepository, BookingRepository>();
         builder.Services.AddScoped<IRoomRepository, RoomRepository>();
         builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 
+        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
-        builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IRoomService, RoomService>();
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IHotelService, HotelService>();
@@ -145,6 +174,7 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
         app.UseStaticFiles();
 
         app.UseCors("ReactPolicy");

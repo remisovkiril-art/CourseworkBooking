@@ -15,4 +15,9 @@ public interface IAuthService
     Task<AuthResponseDto> VerifyAsync(
         VerifyCodeDto dto,
         CancellationToken cancellationToken);
+
+    Task<AuthResponseDto> GoogleLoginAsync(
+        string email,
+        string name,
+        CancellationToken cancellationToken);
 }

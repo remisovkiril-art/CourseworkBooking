@@ -33,7 +33,7 @@ public class UserService : IUserService
             Country = user.Country,
             City = user.City,
             TravelPurpose = user.TravelPurpose,
-            TravelingWithPet = user.TravelingWithPet
+            //TravelingWithPet = user.TravelingWithPet
         };
     }
 
