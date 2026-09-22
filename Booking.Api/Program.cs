@@ -1,6 +1,6 @@
-using System.Text;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
+using Booking.Application.Mapping;
 using Booking.Application.Services;
 using Booking.Application.Settings;
 using Booking.Infrastructure.Data;
@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 namespace Booking.Api;
 
@@ -83,20 +84,20 @@ public class Program
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy =
                         CookieSecurePolicy.SameAsRequest;
-                })
-            .AddGoogle(options =>
-            {
-                options.ClientId =
-                    configuration[
-                        "Authentication:Google:ClientId"]!;
+                });
+            //.AddGoogle(options =>
+            //{
+            //    options.ClientId =
+            //        configuration[
+            //            "Authentication:Google:ClientId"]!;
 
-                options.ClientSecret =
-                    configuration[
-                        "Authentication:Google:ClientSecret"]!;
+            //    options.ClientSecret =
+            //        configuration[
+            //            "Authentication:Google:ClientSecret"]!;
 
-                options.SignInScheme =
-                    CookieAuthenticationDefaults.AuthenticationScheme;
-            });
+            //    options.SignInScheme =
+            //        CookieAuthenticationDefaults.AuthenticationScheme;
+            //});
 
         builder.Services.AddAuthorization();
 
@@ -149,6 +150,14 @@ public class Program
                     }
                 });
         });
+
+        // ================= AutoMapper =================
+        builder.Services.AddAutoMapper(
+            _ => { }, typeof(UserProfile).Assembly, typeof(ReviewProfile).Assembly,
+            typeof(HotelProfile).Assembly,
+            typeof(RoomProfile).Assembly
+            );
+
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IHotelRepository, HotelRepository>();

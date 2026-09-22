@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Hotels;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
@@ -9,10 +10,12 @@ namespace Booking.Application.Services;
 public class HotelService : IHotelService
 {
     private readonly IHotelRepository _hotelRepository;
+    private readonly IMapper _mapper;
 
-    public HotelService(IHotelRepository hotelRepository)
+    public HotelService(IHotelRepository hotelRepository, IMapper mapper)
     {
         _hotelRepository = hotelRepository;
+        _mapper = mapper;
     }
 
     public async Task<List<HotelDto>> GetAllAsync(
@@ -95,14 +98,8 @@ public class HotelService : IHotelService
         if (dto.Rooms.Count < 1 || dto.Rooms.Count > 4)
             throw new Exception("A hotel must have from 1 to 4 rooms");
 
-        var hotel = new Hotel
-        {
-            Id = Guid.NewGuid(),
-            Name = dto.Name,
-            City = dto.City,
-            Country = dto.Country,
-            Description = dto.Description
-        };
+        var hotel = _mapper.Map<Hotel>(dto);
+        hotel.Id = Guid.NewGuid();
 
         foreach (var amenity in dto.Amenities)
         {
@@ -131,17 +128,10 @@ public class HotelService : IHotelService
 
         foreach (var roomDto in dto.Rooms)
         {
-            hotel.Rooms.Add(new Room
-            {
-                Id = Guid.NewGuid(),
-                HotelId = hotel.Id,
-                Title = roomDto.Title,
-                BedType = roomDto.BedType,
-                Capacity = roomDto.Capacity,
-                PricePerNight = roomDto.PricePerNight,
-                IsAvailable = roomDto.IsAvailable,
-                ImageUrl = roomDto.ImageUrl
-            });
+            var room = _mapper.Map<Room>(roomDto);
+            room.Id = Guid.NewGuid();
+            room.HotelId = hotel.Id;
+            hotel.Rooms.Add(room);
         }
 
         await _hotelRepository.AddAsync(hotel, cancellationToken);

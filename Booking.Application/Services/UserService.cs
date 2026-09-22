@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Auth;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Auth;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 
@@ -7,10 +8,12 @@ namespace Booking.Application.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IMapper _mapper;
 
-    public UserService(IUserRepository userRepository)
+    public UserService(IUserRepository userRepository, IMapper mapper)
     {
         _userRepository = userRepository;
+        _mapper = mapper;
     }
 
     public async Task<UpdateUserDto?> GetAsync(
@@ -26,15 +29,8 @@ public class UserService : IUserService
             return null;
         }
 
-        return new UpdateUserDto
-        {
-            Name = user.Name,
-            Phone = user.Phone,
-            Country = user.Country,
-            City = user.City,
-            TravelPurpose = user.TravelPurpose,
-            //TravelingWithPet = user.TravelingWithPet
-        };
+        return _mapper.Map<UpdateUserDto>(user);
+
     }
 
     public async Task UpdateAsync(
@@ -51,12 +47,7 @@ public class UserService : IUserService
             throw new Exception("User not found");
         }
 
-        user.Name = dto.Name;
-        user.Phone = dto.Phone;
-        user.Country = dto.Country;
-        user.City = dto.City;
-        user.TravelPurpose = dto.TravelPurpose;
-        user.TravelingWithPet = dto.TravelingWithPet;
+        _mapper.Map(dto, user);
 
         await _userRepository.UpdateAsync(
             user,

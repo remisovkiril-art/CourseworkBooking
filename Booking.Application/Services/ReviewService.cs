@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Reviews;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
@@ -9,13 +10,16 @@ public class ReviewService : IReviewService
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IHotelRepository _hotelRepository;
+    private readonly IMapper _mapper;
 
     public ReviewService(
         IReviewRepository reviewRepository,
-        IHotelRepository hotelRepository)
+        IHotelRepository hotelRepository,
+        IMapper mapper)
     {
         _reviewRepository = reviewRepository;
         _hotelRepository = hotelRepository;
+        _mapper = mapper;
     }
 
     public async Task<List<ReviewDto>> GetByHotelIdAsync(
@@ -26,15 +30,7 @@ public class ReviewService : IReviewService
             hotelId,
             cancellationToken);
 
-        return reviews.Select(x => new ReviewDto
-        {
-            Id = x.Id,
-            HotelId = x.HotelId,
-            AuthorName = x.User.Name,
-            Text = x.Comment,
-            Rating = x.Rating,
-            CreatedAt = x.CreatedAt
-        }).ToList();
+        return reviews.Select(x => _mapper.Map<ReviewDto>(x)).ToList();
     }
 
     public async Task<ReviewDto> AddAsync(
@@ -63,28 +59,16 @@ public class ReviewService : IReviewService
             throw new Exception("Hotel not found");
         }
 
-        var review = new Review
-        {
-            Id = Guid.NewGuid(),
-            HotelId = dto.HotelId,
-            UserId = userId,
-            Rating = dto.Rating,
-            Comment = dto.Text,
-            CreatedAt = DateTime.UtcNow
-        };
+        var review = _mapper.Map<Review>(dto);
+        review.Id = Guid.NewGuid();
+        review.UserId = userId;
+        review.CreatedAt = DateTime.UtcNow;
 
         await _reviewRepository.AddAsync(
             review,
             cancellationToken);
 
-        return new ReviewDto
-        {
-            Id = review.Id,
-            HotelId = review.HotelId,
-            AuthorName = "User",
-            Text = review.Comment,
-            Rating = review.Rating,
-            CreatedAt = review.CreatedAt
-        };
+        return _mapper.Map<ReviewDto>(review);
+
     }
 }

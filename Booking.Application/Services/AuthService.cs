@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Auth;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Auth;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Application.Settings;
@@ -11,15 +12,18 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
     private readonly JwtSettings _jwtSettings;
+    private readonly IMapper _mapper;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtService jwtService,
-        JwtSettings jwtSettings)
+        JwtSettings jwtSettings,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
         _jwtSettings = jwtSettings;
+        _mapper = mapper;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(
@@ -56,6 +60,7 @@ public class AuthService : IAuthService
             VerificationCode = verificationCode,
             IsVerified = false
         };
+
 
         user.RefreshToken = _jwtService.GenerateRefreshToken();
 
@@ -200,18 +205,29 @@ public class AuthService : IAuthService
         User user,
         string verificationCode)
     {
-        return new AuthResponseDto
-        {
-            AccessToken = _jwtService.GenerateAccessToken(user),
+        var response = _mapper.Map<AuthResponseDto>(user);
+        response.AccessToken =
+       _jwtService.GenerateAccessToken(user);
 
-            AccessTokenExpires = DateTime.UtcNow.AddMinutes(
-                _jwtSettings.AccessTokenMinutes),
+        response.AccessTokenExpires =
+            DateTime.UtcNow.AddMinutes(
+                _jwtSettings.AccessTokenMinutes);
 
-            Email = user.Email,
+        response.VerificationCode = verificationCode;
 
-            RefreshToken = user.RefreshToken,
+        return response;
+        //return new AuthResponseDto
+        //{
+        //    AccessToken = _jwtService.GenerateAccessToken(user),
 
-            VerificationCode = verificationCode
-        };
+        //    AccessTokenExpires = DateTime.UtcNow.AddMinutes(
+        //        _jwtSettings.AccessTokenMinutes),
+
+        //    Email = user.Email,
+
+        //    RefreshToken = user.RefreshToken,
+
+        //    VerificationCode = verificationCode
+        //};
     }
 }
