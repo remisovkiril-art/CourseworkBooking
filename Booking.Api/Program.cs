@@ -84,20 +84,20 @@ public class Program
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy =
                         CookieSecurePolicy.SameAsRequest;
-                });
-            //.AddGoogle(options =>
-            //{
-            //    options.ClientId =
-            //        configuration[
-            //            "Authentication:Google:ClientId"]!;
+                })
+            .AddGoogle(options =>
+            {
+                options.ClientId =
+                    configuration[
+                        "Authentication:Google:ClientId"]!;
 
-            //    options.ClientSecret =
-            //        configuration[
-            //            "Authentication:Google:ClientSecret"]!;
+                options.ClientSecret =
+                    configuration[
+                        "Authentication:Google:ClientSecret"]!;
 
-            //    options.SignInScheme =
-            //        CookieAuthenticationDefaults.AuthenticationScheme;
-            //});
+                options.SignInScheme =
+                    CookieAuthenticationDefaults.AuthenticationScheme;
+            });
 
         builder.Services.AddAuthorization();
 
