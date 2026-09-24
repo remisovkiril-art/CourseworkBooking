@@ -11,27 +11,42 @@ public class RoomService : IRoomService
     private readonly IRoomRepository _roomRepository;
     private readonly IHotelRepository _hotelRepository;
     private readonly IMapper _mapper;
+    private readonly ICachingService _cachingService;
 
     public RoomService(
         IRoomRepository roomRepository,
         IHotelRepository hotelRepository,
-        IMapper mapper
+        IMapper mapper,
+        ICachingService cachingService
         )
     {
         _roomRepository = roomRepository;
         _hotelRepository = hotelRepository;
         _mapper = mapper;
+        _cachingService = cachingService;
     }
 
     public async Task<List<RoomDto>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var rooms = await _roomRepository.GetByHotelIdAsync(
+        var cacheKey = $"rooms:hotel:{hotelId}";
+        var cache = await _cachingService.GetAsync<List<RoomDto>>(cacheKey);
+        if (cache == null)
+        {
+            var rooms = await _roomRepository.GetByHotelIdAsync(
             hotelId,
             cancellationToken);
+            cache = _mapper.Map<List<RoomDto>>(rooms);
+            await _cachingService.SetAsync(cacheKey, cache, null);
 
-        return _mapper.Map<List<RoomDto>>(rooms);
+        }
+        return cache;
+        //var rooms = await _roomRepository.GetByHotelIdAsync(
+        //    hotelId,
+        //    cancellationToken);
+
+        //return _mapper.Map<List<RoomDto>>(rooms);
     }
 
     public async Task<RoomDto?> GetByIdAsync(
@@ -77,6 +92,7 @@ public class RoomService : IRoomService
         room.HotelId = hotelId;
 
         await _roomRepository.AddAsync(room, cancellationToken);
+        await _cachingService.RemoveAsync($"rooms:hotel:{hotelId}");
         return _mapper.Map<RoomDto>(room);
     }
 
