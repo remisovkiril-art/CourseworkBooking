@@ -64,11 +64,17 @@ public class AuthService : IAuthService
 
         await _userRepository.AddAsync(user, cancellationToken);
 
-        await _emailService.SendVerificationCodeAsync(
-            user.Email,
-            verificationCode,
-            cancellationToken);
-
+        try
+        {
+            await _emailService.SendVerificationCodeAsync(
+                user.Email,
+                verificationCode,
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[DEV] Email not sent: {ex.Message}. Code for {user.Email}: {verificationCode}");
+        }
         return CreateResponse(user, verificationCode);
     }
 

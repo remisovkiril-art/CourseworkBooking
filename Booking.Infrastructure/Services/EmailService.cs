@@ -24,6 +24,12 @@ public class EmailService : IEmailService
             string.IsNullOrWhiteSpace(_settings.Password) ||
             string.IsNullOrWhiteSpace(_settings.From))
         {
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+            {
+                Console.WriteLine($"[DEV EMAIL] To: {email}, Code: {code}");
+                return;
+            }
+
             throw new InvalidOperationException("Email settings are not configured.");
         }
 
