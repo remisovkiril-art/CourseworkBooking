@@ -6,4 +6,9 @@ public interface IImageService
         Stream stream,
         string fileName,
         CancellationToken cancellationToken);
+
+    Task<string> SaveUserAvatarAsync(
+     Stream stream,
+     string fileName,
+     CancellationToken cancellationToken);
 }

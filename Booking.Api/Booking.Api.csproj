@@ -27,6 +27,7 @@
 
 	<ItemGroup>
 	  <Folder Include="wwwroot\hotels\" />
+	  <Folder Include="wwwroot\avatars\" />
 	</ItemGroup>
 
 </Project>

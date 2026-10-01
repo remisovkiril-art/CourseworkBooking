@@ -48,4 +48,43 @@ public class ImageService : IImageService
 
         return $"/hotels/{newFileName}";
     }
+    public async Task<string> SaveUserAvatarAsync(
+        Stream stream,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            throw new Exception("Unsupported image format.");
+        }
+
+        var folder = Path.Combine(
+            _environment.ContentRootPath,
+            "wwwroot",
+            "avatars");
+
+        Directory.CreateDirectory(folder);
+
+
+        var newFileName =
+            $"{Guid.NewGuid()}{extension}";
+
+        var path = Path.Combine(
+            folder,
+            newFileName);
+
+        await using var fileStream = new FileStream(
+            path,
+            FileMode.Create);
+
+        await stream.CopyToAsync(
+            fileStream,
+            cancellationToken);
+
+        return $"/avatars/{newFileName}";
+    }
 }

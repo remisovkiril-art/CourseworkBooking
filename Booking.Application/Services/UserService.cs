@@ -33,13 +33,15 @@ public class UserService : IUserService
             Country = user.Country,
             City = user.City,
             TravelPurpose = user.TravelPurpose,
-            //TravelingWithPet = user.TravelingWithPet
+            AvatarUrl = user.AvatarUrl,
+
         };
     }
 
     public async Task UpdateAsync(
         Guid userId,
         UpdateUserDto dto,
+        string? avatarUrl,
         CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(
@@ -51,12 +53,18 @@ public class UserService : IUserService
             throw new Exception("User not found");
         }
 
+        
         user.Name = dto.Name;
         user.Phone = dto.Phone;
         user.Country = dto.Country;
         user.City = dto.City;
         user.TravelPurpose = dto.TravelPurpose;
         user.TravelingWithPet = dto.TravelingWithPet;
+
+        if (avatarUrl != null)
+        {
+            user.AvatarUrl = avatarUrl;
+        }
 
         await _userRepository.UpdateAsync(
             user,

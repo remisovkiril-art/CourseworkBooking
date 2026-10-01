@@ -158,6 +158,7 @@ public class HotelService : IHotelService
                 Id = x.Id,
                 HotelId = x.HotelId,
                 AuthorName = x.User.Name,
+                AuthorAvatarUrl = x.User.AvatarUrl,
                 Text = x.Comment,
                 Rating = x.Rating,
                 CreatedAt = x.CreatedAt
