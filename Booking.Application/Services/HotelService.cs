@@ -157,17 +157,50 @@ public class HotelService : IHotelService
             {
                 Id = x.Id,
                 HotelId = x.HotelId,
-                AuthorName = x.User.Name,
+                AuthorName = x.User.Name ?? "User",
                 AuthorAvatarUrl = x.User.AvatarUrl,
                 Text = x.Comment,
                 Rating = x.Rating,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                Facilities = x.Facilities,
+                Staff = x.Staff,
+                Cleanliness = x.Cleanliness,
+                Comfort = x.Comfort,
+                Location = x.Location,
+                ValueForMoney = x.ValueForMoney,
             })
             .ToList();
 
-        var rating = hotel.Reviews.Count == 0
-            ? 0
-            : Math.Round(hotel.Reviews.Average(x => x.Rating), 1);
+        var hasReviews = hotel.Reviews.Count > 0;
+
+        var rating = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Rating), 1)
+            : 0;
+
+        var facilities = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Facilities), 1)
+            : 0;
+
+        var staff = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Staff), 1)
+            : 0;
+
+        var cleanliness = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Cleanliness), 1)
+            : 0;
+
+        var comfort = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Comfort), 1)
+            : 0;
+
+        var location = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.Location), 1)
+            : 0;
+
+        var valueForMoney = hasReviews
+            ? Math.Round(hotel.Reviews.Average(x => x.ValueForMoney), 1)
+            : 0;
+
 
         var images = hotel.Images
             .Select(x => x.ImageUrl)
@@ -187,6 +220,12 @@ public class HotelService : IHotelService
             Country = hotel.Country,
             Description = hotel.Description,
             Rating = rating,
+            Facilities = facilities,
+            Staff = staff,
+            Cleanliness = cleanliness,
+            Comfort = comfort,
+            Location = location,
+            ValueForMoney = valueForMoney,
             ReviewsCount = reviews.Count,
             MainImageUrl = images.FirstOrDefault() ?? string.Empty,
             Images = images,

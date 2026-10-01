@@ -1,4 +1,6 @@
-﻿namespace Booking.Application.DTOs.Reviews;
+﻿using Booking.Domain.Entities;
+
+namespace Booking.Application.DTOs.Reviews;
 
 public class ReviewDto
 {
@@ -7,6 +9,12 @@ public class ReviewDto
     public string AuthorName { get; set; } = string.Empty;
     public string? AuthorAvatarUrl { get; set; }
     public string Text { get; set; } = string.Empty;
-    public int Rating { get; set; }
+    public double Rating { get; set; }
+    public double Facilities { get; set; }
+    public double Staff { get; set; }
+    public double Cleanliness { get; set; }
+    public double Comfort { get; set; }
+    public double Location { get; set; }
+    public double ValueForMoney { get; set; }
     public DateTime CreatedAt { get; set; }
 }
