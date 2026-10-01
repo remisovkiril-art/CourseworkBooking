@@ -1,11 +1,6 @@
 ﻿using AutoMapper;
 using Booking.Application.DTOs.Reviews;
 using Booking.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Booking.Application.Mapping;
 
@@ -13,9 +8,20 @@ public class ReviewProfile : Profile
 {
     public ReviewProfile()
     {
-        CreateMap<Review, ReviewDto>()
-            .ForMember(dest => dest.AuthorName,opt => opt.MapFrom(src => src.User.Name));
+        CreateMap<CreateReviewDto, Review>()
+            .ForMember(
+                destination => destination.Comment,
+                options => options.MapFrom(source => source.Text)
+            );
 
-        CreateMap<CreateReviewDto, Review>();
+        CreateMap<Review, ReviewDto>()
+            .ForMember(
+                destination => destination.Text,
+                options => options.MapFrom(source => source.Comment)
+            )
+            .ForMember(
+                destination => destination.AuthorName,
+                options => options.MapFrom(source => source.User.Name)
+            );
     }
 }
