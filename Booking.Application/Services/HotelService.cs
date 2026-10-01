@@ -98,6 +98,7 @@ public class HotelService : IHotelService
         var hotel = new Hotel
         {
             Id = Guid.NewGuid(),
+            Address = dto.Address,
             Name = dto.Name,
             City = dto.City,
             Country = dto.Country,
@@ -180,6 +181,7 @@ public class HotelService : IHotelService
         {
             Id = hotel.Id,
             Name = hotel.Name,
+            Address = hotel.Address,
             City = hotel.City,
             Country = hotel.Country,
             Description = hotel.Description,
