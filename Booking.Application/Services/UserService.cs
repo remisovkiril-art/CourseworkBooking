@@ -29,8 +29,20 @@ public class UserService : IUserService
             return null;
         }
 
+<<<<<<< HEAD
         return _mapper.Map<UpdateUserDto>(user);
 
+=======
+        return new UpdateUserDto
+        {
+            Name = user.Name,
+            Phone = user.Phone,
+            Country = user.Country,
+            City = user.City,
+            TravelPurpose = user.TravelPurpose,
+            //TravelingWithPet = user.TravelingWithPet
+        };
+>>>>>>> origin/change-register-dto
     }
 
     public async Task UpdateAsync(

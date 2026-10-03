@@ -30,6 +30,12 @@ public class AuthService : IAuthService
         RegisterDto dto,
         CancellationToken cancellationToken)
     {
+<<<<<<< HEAD
+=======
+        //if (string.IsNullOrWhiteSpace(dto.Name))
+        //    throw new Exception("Name is required");
+
+>>>>>>> origin/change-register-dto
         if (string.IsNullOrWhiteSpace(dto.Email))
         {
             throw new Exception("Email is required");
@@ -55,7 +61,13 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
+<<<<<<< HEAD
             Email = dto.Email,
+=======
+            //Name = dto.Name,
+            Email = dto.Email,
+            //Phone = dto.Phone,
+>>>>>>> origin/change-register-dto
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             VerificationCode = verificationCode,
             IsVerified = false
@@ -158,6 +170,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
+<<<<<<< HEAD
             user = new User
             {
                 Id = Guid.NewGuid(),
@@ -229,5 +242,14 @@ public class AuthService : IAuthService
 
         //    VerificationCode = verificationCode
         //};
+=======
+            AccessToken = _jwtService.GenerateAccessToken(user),
+            AccessTokenExpires = DateTime.UtcNow.AddMinutes(
+                _jwtSettings.AccessTokenMinutes),
+            Email = user.Email,
+            RefreshToken = user.RefreshToken,
+            VerificationCode = verificationCode
+        };
+>>>>>>> origin/change-register-dto
     }
 }
