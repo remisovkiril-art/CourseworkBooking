@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
 using System.Text;
 
 namespace Booking.Api;
@@ -84,20 +85,20 @@ public class Program
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy =
                         CookieSecurePolicy.SameAsRequest;
-                })
-            .AddGoogle(options =>
-            {
-                options.ClientId =
-                    configuration[
-                        "Authentication:Google:ClientId"]!;
+                });
+            //.AddGoogle(options =>
+            //{
+            //    options.ClientId =
+            //        configuration[
+            //            "Authentication:Google:ClientId"]!;
 
-                options.ClientSecret =
-                    configuration[
-                        "Authentication:Google:ClientSecret"]!;
+            //    options.ClientSecret =
+            //        configuration[
+            //            "Authentication:Google:ClientSecret"]!;
 
-                options.SignInScheme =
-                    CookieAuthenticationDefaults.AuthenticationScheme;
-            });
+            //    options.SignInScheme =
+            //        CookieAuthenticationDefaults.AuthenticationScheme;
+            //});
 
         builder.Services.AddAuthorization();
 
@@ -158,14 +159,25 @@ public class Program
             typeof(RoomProfile).Assembly
             );
 
+        ////=================== CACHE =======================
+        //builder.Services.AddMemoryCache();
 
+        //=================== REDIS =======================
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var config = builder.Configuration.GetConnectionString("RedisServerConnection");
+            return ConnectionMultiplexer.Connect(config);
+        });
+
+        //=================== REPOSITORIES ===================
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IHotelRepository, HotelRepository>();
         builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
         builder.Services.AddScoped<IBookingRepository, BookingRepository>();
         builder.Services.AddScoped<IRoomRepository, RoomRepository>();
         builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-
+        
+        //=================== SERVICES ===================
         builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IRoomService, RoomService>();
@@ -175,6 +187,7 @@ public class Program
         builder.Services.AddScoped<IBookingService, BookingService>();
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IImageService, ImageService>();
+        builder.Services.AddScoped<ICachingService, RedisCachingService>();
 
         var app = builder.Build();
 

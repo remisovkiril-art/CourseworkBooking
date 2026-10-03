@@ -11,11 +11,13 @@ public class HotelService : IHotelService
 {
     private readonly IHotelRepository _hotelRepository;
     private readonly IMapper _mapper;
+    private readonly ICachingService _cacheService;
 
-    public HotelService(IHotelRepository hotelRepository, IMapper mapper)
+    public HotelService(IHotelRepository hotelRepository, IMapper mapper, ICachingService cacheService)
     {
         _hotelRepository = hotelRepository;
         _mapper = mapper;
+        _cacheService = cacheService;
     }
 
     public async Task<List<HotelDto>> GetAllAsync(
@@ -81,11 +83,28 @@ public class HotelService : IHotelService
         Guid id,
         CancellationToken cancellationToken)
     {
+        var cacheKey = $"hotel:{id}";
+
+        var cached = await _cacheService.GetAsync<HotelDto>(cacheKey);
+
+        if (cached != null)
+            return cached;
+
         var hotel = await _hotelRepository.GetByIdAsync(
             id,
             cancellationToken);
 
-        return hotel == null ? null : Map(hotel);
+        if (hotel == null)
+            return null;
+
+        var result = Map(hotel);
+
+        await _cacheService.SetAsync(
+            cacheKey,
+            result,
+            null);
+
+        return result;
     }
 
     public async Task<HotelDto> CreateAsync(

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
@@ -11,26 +12,41 @@ public class ReviewService : IReviewService
     private readonly IReviewRepository _reviewRepository;
     private readonly IHotelRepository _hotelRepository;
     private readonly IMapper _mapper;
+    private readonly ICachingService _cachingService;
 
     public ReviewService(
         IReviewRepository reviewRepository,
         IHotelRepository hotelRepository,
-        IMapper mapper)
+        IMapper mapper,
+        ICachingService cachingService)
     {
         _reviewRepository = reviewRepository;
         _hotelRepository = hotelRepository;
         _mapper = mapper;
+        _cachingService = cachingService;
     }
 
     public async Task<List<ReviewDto>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var reviews = await _reviewRepository.GetByHotelIdAsync(
+        var cacheKey = $"reviews:hotel:{hotelId}";
+        var cache = await _cachingService.GetAsync<List<ReviewDto>>(cacheKey);
+        if (cache == null)
+        {
+            var reviews = await _reviewRepository.GetByHotelIdAsync(
             hotelId,
             cancellationToken);
+            cache = _mapper.Map<List<ReviewDto>>(reviews);
+            await _cachingService.SetAsync(cacheKey, cache, null);
 
-        return reviews.Select(x => _mapper.Map<ReviewDto>(x)).ToList();
+        }
+        return cache;
+        //var reviews = await _reviewRepository.GetByHotelIdAsync(
+        //    hotelId,
+        //    cancellationToken);
+
+        //return reviews.Select(x => _mapper.Map<ReviewDto>(x)).ToList();
     }
 
     public async Task<ReviewDto> AddAsync(
@@ -67,6 +83,8 @@ public class ReviewService : IReviewService
         await _reviewRepository.AddAsync(
             review,
             cancellationToken);
+
+        await _cachingService.RemoveAsync($"reviews:hotel:{dto.HotelId}");
 
         return _mapper.Map<ReviewDto>(review);
 
