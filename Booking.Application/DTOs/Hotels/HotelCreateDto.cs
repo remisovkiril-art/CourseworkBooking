@@ -1,10 +1,14 @@
-﻿namespace Booking.Application.DTOs.Hotels;
+﻿using Booking.Application.DTOs.Rooms;
+using Booking.Domain.Enum;
+
+namespace Booking.Application.DTOs.Hotels;
 
 public class HotelCreateDto
 {
     public string Name { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
-
+    public int Stars { get; set; }
+    public HotelType Type { get; set; }
     public string City { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

@@ -1,4 +1,6 @@
 ﻿using Booking.Application.DTOs.Reviews;
+using Booking.Application.DTOs.Rooms;
+using Booking.Domain.Enum;
 
 namespace Booking.Application.DTOs.Hotels;
 
@@ -19,6 +21,9 @@ public class HotelDto
     public string Description { get; set; } = string.Empty;
     public double Rating { get; set; }
     public int ReviewsCount { get; set; }
+    public HotelType Type { get; set; }
+
+    public int Stars { get; set; }
     public string MainImageUrl { get; set; } = string.Empty;
     public List<string> Images { get; set; } = new();
     public List<RoomDto> Rooms { get; set; } = new();
