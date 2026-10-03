@@ -10,7 +10,9 @@ public class UserService : IUserService
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
 
-    public UserService(IUserRepository userRepository, IMapper mapper)
+    public UserService(
+        IUserRepository userRepository,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _mapper = mapper;
@@ -29,20 +31,7 @@ public class UserService : IUserService
             return null;
         }
 
-<<<<<<< HEAD
         return _mapper.Map<UpdateUserDto>(user);
-
-=======
-        return new UpdateUserDto
-        {
-            Name = user.Name,
-            Phone = user.Phone,
-            Country = user.Country,
-            City = user.City,
-            TravelPurpose = user.TravelPurpose,
-            //TravelingWithPet = user.TravelingWithPet
-        };
->>>>>>> origin/change-register-dto
     }
 
     public async Task UpdateAsync(

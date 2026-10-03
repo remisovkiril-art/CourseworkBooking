@@ -11,17 +11,20 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
+    private readonly IEmailService _emailService;
     private readonly JwtSettings _jwtSettings;
     private readonly IMapper _mapper;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtService jwtService,
+        IEmailService emailService,
         JwtSettings jwtSettings,
         IMapper mapper)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
+        _emailService = emailService;
         _jwtSettings = jwtSettings;
         _mapper = mapper;
     }
@@ -30,12 +33,6 @@ public class AuthService : IAuthService
         RegisterDto dto,
         CancellationToken cancellationToken)
     {
-<<<<<<< HEAD
-=======
-        //if (string.IsNullOrWhiteSpace(dto.Name))
-        //    throw new Exception("Name is required");
-
->>>>>>> origin/change-register-dto
         if (string.IsNullOrWhiteSpace(dto.Email))
         {
             throw new Exception("Email is required");
@@ -61,18 +58,11 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
-<<<<<<< HEAD
             Email = dto.Email,
-=======
-            //Name = dto.Name,
-            Email = dto.Email,
-            //Phone = dto.Phone,
->>>>>>> origin/change-register-dto
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             VerificationCode = verificationCode,
             IsVerified = false
         };
-
 
         user.RefreshToken = _jwtService.GenerateRefreshToken();
 
@@ -81,6 +71,11 @@ public class AuthService : IAuthService
 
         await _userRepository.AddAsync(
             user,
+            cancellationToken);
+
+        await _emailService.SendVerificationCodeAsync(
+            user.Email,
+            verificationCode,
             cancellationToken);
 
         return CreateResponse(
@@ -170,7 +165,6 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-<<<<<<< HEAD
             user = new User
             {
                 Id = Guid.NewGuid(),
@@ -219,8 +213,9 @@ public class AuthService : IAuthService
         string verificationCode)
     {
         var response = _mapper.Map<AuthResponseDto>(user);
+
         response.AccessToken =
-       _jwtService.GenerateAccessToken(user);
+            _jwtService.GenerateAccessToken(user);
 
         response.AccessTokenExpires =
             DateTime.UtcNow.AddMinutes(
@@ -229,27 +224,5 @@ public class AuthService : IAuthService
         response.VerificationCode = verificationCode;
 
         return response;
-        //return new AuthResponseDto
-        //{
-        //    AccessToken = _jwtService.GenerateAccessToken(user),
-
-        //    AccessTokenExpires = DateTime.UtcNow.AddMinutes(
-        //        _jwtSettings.AccessTokenMinutes),
-
-        //    Email = user.Email,
-
-        //    RefreshToken = user.RefreshToken,
-
-        //    VerificationCode = verificationCode
-        //};
-=======
-            AccessToken = _jwtService.GenerateAccessToken(user),
-            AccessTokenExpires = DateTime.UtcNow.AddMinutes(
-                _jwtSettings.AccessTokenMinutes),
-            Email = user.Email,
-            RefreshToken = user.RefreshToken,
-            VerificationCode = verificationCode
-        };
->>>>>>> origin/change-register-dto
     }
 }
