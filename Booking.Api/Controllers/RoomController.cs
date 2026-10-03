@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs.Hotels;
+﻿using Booking.Application.DTOs.Rooms;
 using Booking.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

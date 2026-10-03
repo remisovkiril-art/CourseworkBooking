@@ -4,13 +4,12 @@ namespace Booking.Application.Interfaces.Services;
 
 public interface IHotelService
 {
-    Task<List<HotelDto>> GetAllAsync(
-        string? search,
-        int adults,
-        int children,
-        int rooms,
-        DateTime? checkIn,
-        DateTime? checkOut,
+    Task<HotelSearchResultDto> GetAllAsync(
+       HotelSearchDto request,
+       CancellationToken cancellationToken);
+
+    Task<HotelFiltersDto> GetFiltersAsync(
+        HotelSearchDto request,
         CancellationToken cancellationToken);
 
     Task<HotelDto?> GetByIdAsync(

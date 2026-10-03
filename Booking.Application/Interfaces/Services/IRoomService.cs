@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs.Hotels;
+﻿using Booking.Application.DTOs.Rooms;
 
 namespace Booking.Application.Interfaces.Services;
 

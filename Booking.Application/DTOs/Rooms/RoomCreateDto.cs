@@ -1,4 +1,4 @@
-﻿namespace Booking.Application.DTOs.Hotels;
+﻿namespace Booking.Application.DTOs.Rooms;
 
 public class RoomCreateDto
 {
