@@ -225,4 +225,19 @@ public class AuthService : IAuthService
 
         return response;
     }
+
+    public async Task<UserReadDto?> GetProfileAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null)
+        {
+            return null;
+        }
+        return new UserReadDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            Name = user.Name
+        };
+    }
 }
