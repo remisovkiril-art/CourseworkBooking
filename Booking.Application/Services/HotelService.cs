@@ -284,6 +284,11 @@ public class HotelService : IHotelService
 
         if (dto.Rooms.Count < 1 || dto.Rooms.Count > 4)
         {
+            throw new Exception("A hotel must have from 1 to 4 rooms");
+        }
+
+        var hotel = new Hotel
+        {
             Id = Guid.NewGuid(),
             Address = dto.Address,
             Name = dto.Name,
@@ -463,58 +468,12 @@ public class HotelService : IHotelService
                     "Wi-Fi",
                     StringComparison.OrdinalIgnoreCase)),
 
-            Rooms = hotel.Rooms
-                .Select(MapRoom)
-                .ToList(),
+            Rooms = _mapper.Map<List<RoomDto>>(hotel.Rooms),
 
-            Reviews = hotel.Reviews
-                .Select(MapReview)
-                .ToList()
+            Reviews = _mapper.Map<List<ReviewDto>>(hotel.Reviews)
         };
     }
 
-    private RoomDto MapRoom(Room room)
-    {
-        return new RoomDto
-        {
-            Id = room.Id,
-            HotelId = room.HotelId,
-            Title = room.Title,
-            BedType = room.BedType,
-            Capacity = room.Capacity,
-            PricePerNight = room.PricePerNight,
-            IsAvailable = room.IsAvailable,
-            ImageUrl = room.ImageUrl
-        };
-    }
-
-    private ReviewDto MapReview(Review review)
-    {
-        return new ReviewDto
-        {
-            Id = review.Id,
-            HotelId = review.HotelId,
-
-            AuthorName = review.User != null
-                ? review.User.Name
-                : "Anonymous",
-
-            AuthorAvatarUrl = review.User != null
-                ? review.User.AvatarUrl
-                : null,
-
-            Text = review.Comment,
-
-            Rating = review.Rating,
-            Facilities = review.Facilities,
-            Staff = review.Staff,
-            Cleanliness = review.Cleanliness,
-            Comfort = review.Comfort,
-            Location = review.Location,
-            ValueForMoney = review.ValueForMoney,
-
-            CreatedAt = review.CreatedAt
-        };
-    }
+ 
 }
 

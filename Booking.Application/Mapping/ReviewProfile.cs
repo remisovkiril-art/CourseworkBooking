@@ -16,12 +16,19 @@ public class ReviewProfile : Profile
 
         CreateMap<Review, ReviewDto>()
             .ForMember(
-                destination => destination.Text,
-                options => options.MapFrom(source => source.Comment)
-            )
+                dest => dest.AuthorName,
+                opt => opt.MapFrom(src =>
+                    src.User != null
+                        ? src.User.Name
+                        : "User"))
             .ForMember(
-                destination => destination.AuthorName,
-                options => options.MapFrom(source => source.User.Name)
-            );
+                dest => dest.AuthorAvatarUrl,
+                opt => opt.MapFrom(src =>
+                    src.User != null
+                        ? src.User.AvatarUrl
+                        : null))
+            .ForMember(
+                dest => dest.Text,
+                opt => opt.MapFrom(src => src.Comment));
     }
 }
