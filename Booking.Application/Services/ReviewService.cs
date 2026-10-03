@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Reviews;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
@@ -9,42 +10,45 @@ public class ReviewService : IReviewService
 {
     private readonly IReviewRepository _reviewRepository;
     private readonly IHotelRepository _hotelRepository;
+    private readonly IMapper _mapper;
+    private readonly ICachingService _cachingService;
 
     public ReviewService(
         IReviewRepository reviewRepository,
-        IHotelRepository hotelRepository)
+        IHotelRepository hotelRepository,
+        IMapper mapper,
+        ICachingService cachingService)
     {
         _reviewRepository = reviewRepository;
         _hotelRepository = hotelRepository;
+        _mapper = mapper;
+        _cachingService = cachingService;
     }
 
     public async Task<List<ReviewDto>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var reviews = await _reviewRepository.GetByHotelIdAsync(
-            hotelId,
-            cancellationToken);
+        var cacheKey = $"reviews:hotel:{hotelId}";
 
-        return reviews.Select(x => new ReviewDto
+        var cache = await _cachingService
+            .GetAsync<List<ReviewDto>>(cacheKey);
+
+        if (cache == null)
         {
-            Id = x.Id,
-            HotelId = x.HotelId,
-            AuthorName = x.User.Name ?? "User",
-            AuthorAvatarUrl = x.User.AvatarUrl,
+            var reviews = await _reviewRepository.GetByHotelIdAsync(
+                hotelId,
+                cancellationToken);
 
-            Text = x.Comment,
-            Rating = x.Rating,
+            cache = _mapper.Map<List<ReviewDto>>(reviews);
 
-            Facilities = x.Facilities,
-            Staff = x.Staff,
-            Cleanliness = x.Cleanliness,
-            Comfort = x.Comfort,
-            Location = x.Location,
-            ValueForMoney = x.ValueForMoney,
+            await _cachingService.SetAsync(
+                cacheKey,
+                cache,
+                null);
+        }
 
-            CreatedAt = x.CreatedAt
-        }).ToList();
+        return cache;
     }
 
     public async Task<ReviewDto> AddAsync(
@@ -92,7 +96,9 @@ public class ReviewService : IReviewService
             HotelId = dto.HotelId,
             UserId = userId,
 
-            Rating = Math.Round(rating, 1),
+            Rating = Math.Round(
+                rating,
+                1),
 
             Facilities = dto.Facilities,
             Staff = dto.Staff,
@@ -109,22 +115,22 @@ public class ReviewService : IReviewService
             review,
             cancellationToken);
 
+        await _cachingService.RemoveAsync(
+            $"reviews:hotel:{dto.HotelId}");
+
         return new ReviewDto
         {
             Id = review.Id,
             HotelId = review.HotelId,
             AuthorName = "User",
             Text = review.Comment,
-
             Rating = review.Rating,
-
             Facilities = review.Facilities,
             Staff = review.Staff,
             Cleanliness = review.Cleanliness,
             Comfort = review.Comfort,
             Location = review.Location,
             ValueForMoney = review.ValueForMoney,
-
             CreatedAt = review.CreatedAt
         };
     }

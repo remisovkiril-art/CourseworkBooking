@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Auth;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Auth;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Application.Settings;
@@ -12,57 +13,65 @@ public class AuthService : IAuthService
     private readonly IJwtService _jwtService;
     private readonly IEmailService _emailService;
     private readonly JwtSettings _jwtSettings;
+    private readonly IMapper _mapper;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtService jwtService,
         IEmailService emailService,
-        JwtSettings jwtSettings)
+        JwtSettings jwtSettings,
+        IMapper mapper)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
         _emailService = emailService;
         _jwtSettings = jwtSettings;
+        _mapper = mapper;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(
         RegisterDto dto,
         CancellationToken cancellationToken)
     {
-        //if (string.IsNullOrWhiteSpace(dto.Name))
-        //    throw new Exception("Name is required");
-
         if (string.IsNullOrWhiteSpace(dto.Email))
+        {
             throw new Exception("Email is required");
+        }
 
         if (string.IsNullOrWhiteSpace(dto.Password))
+        {
             throw new Exception("Password is required");
+        }
 
         var existingUser = await _userRepository.GetByEmailAsync(
             dto.Email,
             cancellationToken);
 
         if (existingUser != null)
+        {
             throw new Exception("User with this email already exists");
+        }
 
-        var verificationCode = Random.Shared.Next(100000, 1000000).ToString();
+        var verificationCode =
+            Random.Shared.Next(100000, 1000000).ToString();
 
         var user = new User
         {
             Id = Guid.NewGuid(),
-            //Name = dto.Name,
             Email = dto.Email,
-            //Phone = dto.Phone,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             VerificationCode = verificationCode,
             IsVerified = false
         };
 
         user.RefreshToken = _jwtService.GenerateRefreshToken();
+
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
             _jwtSettings.RefreshTokenDays);
 
-        await _userRepository.AddAsync(user, cancellationToken);
+        await _userRepository.AddAsync(
+            user,
+            cancellationToken);
 
         try
         {
@@ -73,9 +82,13 @@ public class AuthService : IAuthService
         }
         catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"[DEV] Email not sent: {ex.Message}. Code for {user.Email}: {verificationCode}");
+            Console.WriteLine(
+                $"[DEV] Email not sent: {ex.Message}. Code for {user.Email}: {verificationCode}");
         }
-        return CreateResponse(user, verificationCode);
+
+        return CreateResponse(
+            user,
+            verificationCode);
     }
 
     public async Task<AuthResponseDto> LoginAsync(
@@ -87,22 +100,31 @@ public class AuthService : IAuthService
             cancellationToken);
 
         if (user == null)
+        {
             throw new Exception("Invalid email or password");
+        }
 
         var validPassword = BCrypt.Net.BCrypt.Verify(
             dto.Password,
             user.PasswordHash);
 
         if (!validPassword)
+        {
             throw new Exception("Invalid email or password");
+        }
 
         user.RefreshToken = _jwtService.GenerateRefreshToken();
+
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
             _jwtSettings.RefreshTokenDays);
 
-        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _userRepository.UpdateAsync(
+            user,
+            cancellationToken);
 
-        return CreateResponse(user, user.VerificationCode);
+        return CreateResponse(
+            user,
+            user.VerificationCode);
     }
 
     public async Task<AuthResponseDto> VerifyAsync(
@@ -114,32 +136,120 @@ public class AuthService : IAuthService
             cancellationToken);
 
         if (user == null)
+        {
             throw new Exception("User not found");
+        }
 
         if (user.VerificationCode != dto.Code)
+        {
             throw new Exception("Invalid verification code");
+        }
 
         user.IsVerified = true;
         user.VerificationCode = string.Empty;
+
         user.RefreshToken = _jwtService.GenerateRefreshToken();
+
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
             _jwtSettings.RefreshTokenDays);
 
-        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _userRepository.UpdateAsync(
+            user,
+            cancellationToken);
 
-        return CreateResponse(user, string.Empty);
+        return CreateResponse(
+            user,
+            string.Empty);
     }
 
-    private AuthResponseDto CreateResponse(User user, string verificationCode)
+    public async Task<AuthResponseDto> GoogleLoginAsync(
+        string email,
+        string name,
+        CancellationToken cancellationToken)
     {
-        return new AuthResponseDto
+        var user = await _userRepository.GetByEmailAsync(
+            email,
+            cancellationToken);
+
+        if (user == null)
         {
-            AccessToken = _jwtService.GenerateAccessToken(user),
-            AccessTokenExpires = DateTime.UtcNow.AddMinutes(
-                _jwtSettings.AccessTokenMinutes),
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Email = email,
+                PasswordHash = string.Empty,
+                VerificationCode = string.Empty,
+                IsVerified = true
+            };
+
+            user.RefreshToken = _jwtService.GenerateRefreshToken();
+
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
+                _jwtSettings.RefreshTokenDays);
+
+            await _userRepository.AddAsync(
+                user,
+                cancellationToken);
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(user.Name))
+            {
+                user.Name = name;
+            }
+
+            user.IsVerified = true;
+
+            user.RefreshToken = _jwtService.GenerateRefreshToken();
+
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
+                _jwtSettings.RefreshTokenDays);
+
+            await _userRepository.UpdateAsync(
+                user,
+                cancellationToken);
+        }
+
+        return CreateResponse(
+            user,
+            string.Empty);
+    }
+
+    public async Task<UserReadDto?> GetProfileAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(
+            email,
+            CancellationToken.None);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new UserReadDto
+        {
+            Id = user.Id,
             Email = user.Email,
-            RefreshToken = user.RefreshToken,
-            VerificationCode = verificationCode
+            Name = user.Name
         };
+    }
+
+    private AuthResponseDto CreateResponse(
+        User user,
+        string verificationCode)
+    {
+        var response = _mapper.Map<AuthResponseDto>(user);
+
+        response.AccessToken =
+            _jwtService.GenerateAccessToken(user);
+
+        response.AccessTokenExpires =
+            DateTime.UtcNow.AddMinutes(
+                _jwtSettings.AccessTokenMinutes);
+
+        response.VerificationCode = verificationCode;
+
+        return response;
     }
 }

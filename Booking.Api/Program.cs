@@ -1,15 +1,20 @@
-using System.Text;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
+using Booking.Application.Mapping;
 using Booking.Application.Services;
 using Booking.Application.Settings;
 using Booking.Infrastructure.Data;
 using Booking.Infrastructure.Repositories;
 using Booking.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
+using System.Text;
 
 namespace Booking.Api;
 
@@ -21,6 +26,8 @@ public class Program
 
         var configuration = builder.Configuration;
 
+        // ================= DATABASE =================
+
         builder.Services.AddDbContext<ApplicationDbContext>(
             options =>
             {
@@ -28,6 +35,8 @@ public class Program
                     configuration.GetConnectionString(
                         "SqlServerConnection"));
             });
+
+        // ================= JWT =================
 
         var jwtSettings =
             configuration
@@ -37,19 +46,26 @@ public class Program
 
         builder.Services.AddSingleton(jwtSettings);
 
+        // ================= EMAIL =================
+
         var emailSettings =
             configuration
                 .GetSection("Email")
                 .Get<EmailSettings>()
-            ?? new EmailSettings();
+            ?? throw new Exception("Email settings not configured.");
 
         builder.Services.AddSingleton(emailSettings);
+
+        // ================= AUTHENTICATION =================
 
         builder.Services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme =
                     JwtBearerDefaults.AuthenticationScheme;
+
+                options.DefaultSignInScheme =
+                    CookieAuthenticationDefaults.AuthenticationScheme;
 
                 options.DefaultChallengeScheme =
                     JwtBearerDefaults.AuthenticationScheme;
@@ -59,40 +75,79 @@ public class Program
                 options.TokenValidationParameters =
                     new TokenValidationParameters
                     {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtSettings.Issuer,
-                        ValidAudience = jwtSettings.Audience,
+
                         IssuerSigningKey =
                             new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                                Encoding.UTF8.GetBytes(
+                                    configuration["Jwt:Key"]!)),
+
+                        ValidateIssuer = true,
+                        ValidIssuer =
+                            configuration["Jwt:Issuer"],
+
+                        ValidateAudience = true,
+                        ValidAudience =
+                            configuration["Jwt:Audience"],
+
+                        ValidateLifetime = true,
                         ClockSkew = TimeSpan.Zero
                     };
-            });
+            })
+            .AddCookie(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                options =>
+                {
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SameSite =
+                        SameSiteMode.Lax;
+
+                    options.Cookie.SecurePolicy =
+                        CookieSecurePolicy.SameAsRequest;
+                })
+            .AddGoogle(
+                GoogleDefaults.AuthenticationScheme,
+                options =>
+                {
+                    options.ClientId =
+                        configuration[
+                            "Authentication:Google:ClientId"]!;
+
+                    options.ClientSecret =
+                        configuration[
+                            "Authentication:Google:ClientSecret"]!;
+
+                    options.SignInScheme =
+                        CookieAuthenticationDefaults.AuthenticationScheme;
+                });
 
         builder.Services.AddAuthorization();
+
+        // ================= CORS =================
 
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("ReactPolicy", policy =>
             {
                 policy
-                    .WithOrigins(
-                        "http://localhost:5173")
+                    .WithOrigins("http://localhost:5173")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
             });
         });
 
+        // ================= CONTROLLERS =================
+
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
 
+        // ================= SWAGGER =================
+
         builder.Services.AddSwaggerGen(options =>
         {
-            options.AddSecurityDefinition("Bearer",
+            options.AddSecurityDefinition(
+                "Bearer",
                 new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
@@ -109,16 +164,40 @@ public class Program
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
+                            Reference =
+                                new OpenApiReference
+                                {
+                                    Type =
+                                        ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
                         },
                         Array.Empty<string>()
                     }
                 });
         });
+
+        // ================= AUTOMAPPER =================
+
+        builder.Services.AddAutoMapper(
+            _ => { },
+            typeof(UserProfile).Assembly,
+            typeof(ReviewProfile).Assembly,
+            typeof(HotelProfile).Assembly,
+            typeof(RoomProfile).Assembly);
+
+        // ================= REDIS =================
+
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var config =
+                builder.Configuration.GetConnectionString(
+                    "RedisServerConnection");
+
+            return ConnectionMultiplexer.Connect(config);
+        });
+
+        // ================= REPOSITORIES =================
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IHotelRepository, HotelRepository>();
@@ -126,10 +205,11 @@ public class Program
         builder.Services.AddScoped<IBookingRepository, BookingRepository>();
         builder.Services.AddScoped<IRoomRepository, RoomRepository>();
         builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 
+        // ================= SERVICES =================
+
+        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
-        builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IRoomService, RoomService>();
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IHotelService, HotelService>();
@@ -138,6 +218,14 @@ public class Program
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IImageService, ImageService>();
 
+        // EMAIL SERVICE
+        builder.Services.AddScoped<IEmailService, EmailService>();
+
+        // CACHE
+        builder.Services.AddScoped<ICachingService, RedisCachingService>();
+
+        // ================= APPLICATION =================
+
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())
@@ -145,6 +233,7 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
         app.UseStaticFiles();
 
         app.UseCors("ReactPolicy");

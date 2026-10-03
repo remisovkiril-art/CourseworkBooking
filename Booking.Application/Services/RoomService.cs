@@ -1,4 +1,6 @@
 ﻿using Booking.Application.DTOs.Rooms;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Hotels;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
@@ -9,24 +11,43 @@ public class RoomService : IRoomService
 {
     private readonly IRoomRepository _roomRepository;
     private readonly IHotelRepository _hotelRepository;
+    private readonly IMapper _mapper;
+    private readonly ICachingService _cachingService;
 
     public RoomService(
         IRoomRepository roomRepository,
-        IHotelRepository hotelRepository)
+        IHotelRepository hotelRepository,
+        IMapper mapper,
+        ICachingService cachingService
+        )
     {
         _roomRepository = roomRepository;
         _hotelRepository = hotelRepository;
+        _mapper = mapper;
+        _cachingService = cachingService;
     }
 
     public async Task<List<RoomDto>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var rooms = await _roomRepository.GetByHotelIdAsync(
+        var cacheKey = $"rooms:hotel:{hotelId}";
+        var cache = await _cachingService.GetAsync<List<RoomDto>>(cacheKey);
+        if (cache == null)
+        {
+            var rooms = await _roomRepository.GetByHotelIdAsync(
             hotelId,
             cancellationToken);
+            cache = _mapper.Map<List<RoomDto>>(rooms);
+            await _cachingService.SetAsync(cacheKey, cache, null);
 
-        return rooms.Select(Map).ToList();
+        }
+        return cache;
+        //var rooms = await _roomRepository.GetByHotelIdAsync(
+        //    hotelId,
+        //    cancellationToken);
+
+        //return _mapper.Map<List<RoomDto>>(rooms);
     }
 
     public async Task<RoomDto?> GetByIdAsync(
@@ -36,8 +57,7 @@ public class RoomService : IRoomService
         var room = await _roomRepository.GetByIdAsync(
             id,
             cancellationToken);
-
-        return room == null ? null : Map(room);
+        return room == null ? null : _mapper.Map<RoomDto>(room);
     }
 
     public async Task<RoomDto> CreateAsync(
@@ -68,35 +88,13 @@ public class RoomService : IRoomService
         if (dto.PricePerNight < 0)
             throw new Exception("Room price cannot be negative");
 
-        var room = new Room
-        {
-            Id = Guid.NewGuid(),
-            HotelId = hotelId,
-            Title = dto.Title,
-            BedType = dto.BedType,
-            Capacity = dto.Capacity,
-            PricePerNight = dto.PricePerNight,
-            IsAvailable = dto.IsAvailable,
-            ImageUrl = dto.ImageUrl
-        };
+        var room = _mapper.Map<Room>(dto);
+        room.Id = Guid.NewGuid();
+        room.HotelId = hotelId;
 
         await _roomRepository.AddAsync(room, cancellationToken);
-
-        return Map(room);
+        await _cachingService.RemoveAsync($"rooms:hotel:{hotelId}");
+        return _mapper.Map<RoomDto>(room);
     }
 
-    private static RoomDto Map(Room room)
-    {
-        return new RoomDto
-        {
-            Id = room.Id,
-            HotelId = room.HotelId,
-            Title = room.Title,
-            BedType = room.BedType,
-            Capacity = room.Capacity,
-            PricePerNight = room.PricePerNight,
-            IsAvailable = room.IsAvailable,
-            ImageUrl = room.ImageUrl
-        };
-    }
 }

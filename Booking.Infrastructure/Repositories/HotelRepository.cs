@@ -18,6 +18,7 @@ public class HotelRepository : IHotelRepository
         CancellationToken cancellationToken)
     {
         return await _context.Hotels
+            .AsSplitQuery()
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
@@ -32,6 +33,7 @@ public class HotelRepository : IHotelRepository
         CancellationToken cancellationToken)
     {
         return await _context.Hotels
+            .AsSplitQuery()
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)

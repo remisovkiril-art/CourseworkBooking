@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs.Hotels;
+﻿using AutoMapper;
+using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.DTOs.Rooms;
 using Booking.Application.DTOs.Stars;
@@ -12,10 +13,17 @@ namespace Booking.Application.Services;
 public class HotelService : IHotelService
 {
     private readonly IHotelRepository _hotelRepository;
+    private readonly IMapper _mapper;
+    private readonly ICachingService _cacheService;
 
-    public HotelService(IHotelRepository hotelRepository)
+    public HotelService(
+        IHotelRepository hotelRepository,
+        IMapper mapper,
+        ICachingService cacheService)
     {
         _hotelRepository = hotelRepository;
+        _mapper = mapper;
+        _cacheService = cacheService;
     }
 
     public async Task<HotelSearchResultDto> GetAllAsync(
@@ -236,11 +244,33 @@ public class HotelService : IHotelService
         Guid id,
         CancellationToken cancellationToken)
     {
+        var cacheKey = $"hotel:{id}";
+
+        var cached = await _cacheService.GetAsync<HotelDto>(
+            cacheKey);
+
+        if (cached != null)
+        {
+            return cached;
+        }
+
         var hotel = await _hotelRepository.GetByIdAsync(
             id,
             cancellationToken);
 
-        return hotel == null ? null : Map(hotel);
+        if (hotel == null)
+        {
+            return null;
+        }
+
+        var result = Map(hotel);
+
+        await _cacheService.SetAsync(
+            cacheKey,
+            result,
+            null);
+
+        return result;
     }
 
     public async Task<HotelDto> CreateAsync(
@@ -248,12 +278,11 @@ public class HotelService : IHotelService
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
+        {
             throw new Exception("Hotel name is required");
+        }
 
         if (dto.Rooms.Count < 1 || dto.Rooms.Count > 4)
-            throw new Exception("A hotel must have from 1 to 4 rooms");
-
-        var hotel = new Hotel
         {
             Id = Guid.NewGuid(),
             Address = dto.Address,
@@ -280,7 +309,9 @@ public class HotelService : IHotelService
 
         if (dto.HasWifi == true &&
             !hotel.Amenities.Any(x =>
-                x.AmenityName.Equals("Wi-Fi", StringComparison.OrdinalIgnoreCase)))
+                x.AmenityName.Equals(
+                    "Wi-Fi",
+                    StringComparison.OrdinalIgnoreCase)))
         {
             hotel.Amenities.Add(new HotelAmenity
             {
@@ -292,20 +323,18 @@ public class HotelService : IHotelService
 
         foreach (var roomDto in dto.Rooms)
         {
-            hotel.Rooms.Add(new Room
-            {
-                Id = Guid.NewGuid(),
-                HotelId = hotel.Id,
-                Title = roomDto.Title,
-                BedType = roomDto.BedType,
-                Capacity = roomDto.Capacity,
-                PricePerNight = roomDto.PricePerNight,
-                IsAvailable = roomDto.IsAvailable,
-                ImageUrl = roomDto.ImageUrl
-            });
+            var room = _mapper.Map<Room>(roomDto);
+
+            room.Id = Guid.NewGuid();
+            room.HotelId = hotel.Id;
+
+            hotel.Rooms.Add(room);
         }
 
-        await _hotelRepository.AddAsync(hotel, cancellationToken);
+        await _hotelRepository.AddAsync(
+            hotel,
+            cancellationToken);
+
         return Map(hotel);
     }
 
