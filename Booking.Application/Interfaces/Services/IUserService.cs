@@ -11,5 +11,6 @@ public interface IUserService
     Task UpdateAsync(
         Guid userId,
         UpdateUserDto dto,
+         string? avatarUrl,
         CancellationToken cancellationToken);
 }

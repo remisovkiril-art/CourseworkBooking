@@ -6,6 +6,14 @@ public class HotelDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public double Facilities { get; set; }
+
+    public double Staff { get; set; }
+    public double Cleanliness { get; set; }
+    public double Comfort { get; set; }
+    public double Location { get; set; }
+    public double ValueForMoney { get; set; }
     public string City { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

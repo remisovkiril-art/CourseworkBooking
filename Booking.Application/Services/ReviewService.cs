@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
@@ -31,22 +30,25 @@ public class ReviewService : IReviewService
         CancellationToken cancellationToken)
     {
         var cacheKey = $"reviews:hotel:{hotelId}";
-        var cache = await _cachingService.GetAsync<List<ReviewDto>>(cacheKey);
+
+        var cache = await _cachingService
+            .GetAsync<List<ReviewDto>>(cacheKey);
+
         if (cache == null)
         {
             var reviews = await _reviewRepository.GetByHotelIdAsync(
-            hotelId,
-            cancellationToken);
+                hotelId,
+                cancellationToken);
+
             cache = _mapper.Map<List<ReviewDto>>(reviews);
-            await _cachingService.SetAsync(cacheKey, cache, null);
 
+            await _cachingService.SetAsync(
+                cacheKey,
+                cache,
+                null);
         }
-        return cache;
-        //var reviews = await _reviewRepository.GetByHotelIdAsync(
-        //    hotelId,
-        //    cancellationToken);
 
-        //return reviews.Select(x => _mapper.Map<ReviewDto>(x)).ToList();
+        return cache;
     }
 
     public async Task<ReviewDto> AddAsync(
@@ -54,16 +56,20 @@ public class ReviewService : IReviewService
         CreateReviewDto dto,
         CancellationToken cancellationToken)
     {
-        if (dto.Rating < 1 || dto.Rating > 5)
-        {
-            throw new Exception(
-                "Rating must be from 1 to 5");
-        }
-
         if (string.IsNullOrWhiteSpace(dto.Text))
         {
+            throw new Exception("Review text is required");
+        }
+
+        if (dto.Facilities < 1 || dto.Facilities > 10 ||
+            dto.Staff < 1 || dto.Staff > 10 ||
+            dto.Cleanliness < 1 || dto.Cleanliness > 10 ||
+            dto.Comfort < 1 || dto.Comfort > 10 ||
+            dto.Location < 1 || dto.Location > 10 ||
+            dto.ValueForMoney < 1 || dto.ValueForMoney > 10)
+        {
             throw new Exception(
-                "Review text is required");
+                "All ratings must be from 1 to 10");
         }
 
         var hotel = await _hotelRepository.GetByIdAsync(
@@ -75,18 +81,57 @@ public class ReviewService : IReviewService
             throw new Exception("Hotel not found");
         }
 
-        var review = _mapper.Map<Review>(dto);
-        review.Id = Guid.NewGuid();
-        review.UserId = userId;
-        review.CreatedAt = DateTime.UtcNow;
+        var rating = (
+            dto.Facilities +
+            dto.Staff +
+            dto.Cleanliness +
+            dto.Comfort +
+            dto.Location +
+            dto.ValueForMoney
+        ) / 6;
+
+        var review = new Review
+        {
+            Id = Guid.NewGuid(),
+            HotelId = dto.HotelId,
+            UserId = userId,
+
+            Rating = Math.Round(
+                rating,
+                1),
+
+            Facilities = dto.Facilities,
+            Staff = dto.Staff,
+            Cleanliness = dto.Cleanliness,
+            Comfort = dto.Comfort,
+            Location = dto.Location,
+            ValueForMoney = dto.ValueForMoney,
+
+            Comment = dto.Text,
+            CreatedAt = DateTime.UtcNow
+        };
 
         await _reviewRepository.AddAsync(
             review,
             cancellationToken);
 
-        await _cachingService.RemoveAsync($"reviews:hotel:{dto.HotelId}");
+        await _cachingService.RemoveAsync(
+            $"reviews:hotel:{dto.HotelId}");
 
-        return _mapper.Map<ReviewDto>(review);
-
+        return new ReviewDto
+        {
+            Id = review.Id,
+            HotelId = review.HotelId,
+            AuthorName = "User",
+            Text = review.Comment,
+            Rating = review.Rating,
+            Facilities = review.Facilities,
+            Staff = review.Staff,
+            Cleanliness = review.Cleanliness,
+            Comfort = review.Comfort,
+            Location = review.Location,
+            ValueForMoney = review.ValueForMoney,
+            CreatedAt = review.CreatedAt
+        };
     }
 }

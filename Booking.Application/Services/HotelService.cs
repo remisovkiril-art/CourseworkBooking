@@ -13,7 +13,10 @@ public class HotelService : IHotelService
     private readonly IMapper _mapper;
     private readonly ICachingService _cacheService;
 
-    public HotelService(IHotelRepository hotelRepository, IMapper mapper, ICachingService cacheService)
+    public HotelService(
+        IHotelRepository hotelRepository,
+        IMapper mapper,
+        ICachingService cacheService)
     {
         _hotelRepository = hotelRepository;
         _mapper = mapper;
@@ -29,20 +32,30 @@ public class HotelService : IHotelService
         DateTime? checkOut,
         CancellationToken cancellationToken)
     {
-        var hotels = await _hotelRepository.GetAllAsync(cancellationToken);
+        var hotels = await _hotelRepository.GetAllAsync(
+            cancellationToken);
+
         var result = hotels.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             result = result.Where(x =>
-                x.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                x.City.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                x.Country.Contains(search, StringComparison.OrdinalIgnoreCase));
+                x.Name.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase) ||
+                x.City.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase) ||
+                x.Country.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase));
         }
 
         var people = adults + children;
 
-        if (checkIn.HasValue && checkOut.HasValue && checkOut.Value > checkIn.Value)
+        if (checkIn.HasValue &&
+            checkOut.HasValue &&
+            checkOut.Value > checkIn.Value)
         {
             result = result.Where(h => h.Rooms.Any(r =>
                 r.IsAvailable &&
@@ -55,12 +68,15 @@ public class HotelService : IHotelService
         else if (people > 0)
         {
             result = result.Where(h => h.Rooms.Any(r =>
-                r.IsAvailable && r.Capacity >= people));
+                r.IsAvailable &&
+                r.Capacity >= people));
         }
 
         if (rooms > 0)
         {
-            if (checkIn.HasValue && checkOut.HasValue && checkOut.Value > checkIn.Value)
+            if (checkIn.HasValue &&
+                checkOut.HasValue &&
+                checkOut.Value > checkIn.Value)
             {
                 result = result.Where(h =>
                     h.Rooms.Count(r =>
@@ -72,7 +88,8 @@ public class HotelService : IHotelService
             }
             else
             {
-                result = result.Where(h => h.Rooms.Count(r => r.IsAvailable) >= rooms);
+                result = result.Where(h =>
+                    h.Rooms.Count(r => r.IsAvailable) >= rooms);
             }
         }
 
@@ -85,17 +102,22 @@ public class HotelService : IHotelService
     {
         var cacheKey = $"hotel:{id}";
 
-        var cached = await _cacheService.GetAsync<HotelDto>(cacheKey);
+        var cached = await _cacheService.GetAsync<HotelDto>(
+            cacheKey);
 
         if (cached != null)
+        {
             return cached;
+        }
 
         var hotel = await _hotelRepository.GetByIdAsync(
             id,
             cancellationToken);
 
         if (hotel == null)
+        {
             return null;
+        }
 
         var result = Map(hotel);
 
@@ -112,12 +134,18 @@ public class HotelService : IHotelService
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
+        {
             throw new Exception("Hotel name is required");
+        }
 
         if (dto.Rooms.Count < 1 || dto.Rooms.Count > 4)
-            throw new Exception("A hotel must have from 1 to 4 rooms");
+        {
+            throw new Exception(
+                "A hotel must have from 1 to 4 rooms");
+        }
 
         var hotel = _mapper.Map<Hotel>(dto);
+
         hotel.Id = Guid.NewGuid();
 
         foreach (var amenity in dto.Amenities)
@@ -135,7 +163,9 @@ public class HotelService : IHotelService
 
         if (dto.HasWifi == true &&
             !hotel.Amenities.Any(x =>
-                x.AmenityName.Equals("Wi-Fi", StringComparison.OrdinalIgnoreCase)))
+                x.AmenityName.Equals(
+                    "Wi-Fi",
+                    StringComparison.OrdinalIgnoreCase)))
         {
             hotel.Amenities.Add(new HotelAmenity
             {
@@ -148,12 +178,17 @@ public class HotelService : IHotelService
         foreach (var roomDto in dto.Rooms)
         {
             var room = _mapper.Map<Room>(roomDto);
+
             room.Id = Guid.NewGuid();
             room.HotelId = hotel.Id;
+
             hotel.Rooms.Add(room);
         }
 
-        await _hotelRepository.AddAsync(hotel, cancellationToken);
+        await _hotelRepository.AddAsync(
+            hotel,
+            cancellationToken);
+
         return Map(hotel);
     }
 
@@ -165,23 +200,72 @@ public class HotelService : IHotelService
             {
                 Id = x.Id,
                 HotelId = x.HotelId,
-                AuthorName = x.User.Name,
+                AuthorName = x.User.Name ?? "User",
+                AuthorAvatarUrl = x.User.AvatarUrl,
                 Text = x.Comment,
                 Rating = x.Rating,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                Facilities = x.Facilities,
+                Staff = x.Staff,
+                Cleanliness = x.Cleanliness,
+                Comfort = x.Comfort,
+                Location = x.Location,
+                ValueForMoney = x.ValueForMoney
             })
             .ToList();
 
-        var rating = hotel.Reviews.Count == 0
-            ? 0
-            : Math.Round(hotel.Reviews.Average(x => x.Rating), 1);
+        var hasReviews = hotel.Reviews.Count > 0;
+
+        var rating = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Rating),
+                1)
+            : 0;
+
+        var facilities = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Facilities),
+                1)
+            : 0;
+
+        var staff = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Staff),
+                1)
+            : 0;
+
+        var cleanliness = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Cleanliness),
+                1)
+            : 0;
+
+        var comfort = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Comfort),
+                1)
+            : 0;
+
+        var location = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.Location),
+                1)
+            : 0;
+
+        var valueForMoney = hasReviews
+            ? Math.Round(
+                hotel.Reviews.Average(x => x.ValueForMoney),
+                1)
+            : 0;
 
         var images = hotel.Images
             .Select(x => x.ImageUrl)
             .ToList();
 
         var hasWifi = hotel.Amenities.Any(x =>
-            x.AmenityName.Equals("Wi-Fi", StringComparison.OrdinalIgnoreCase))
+            x.AmenityName.Equals(
+                "Wi-Fi",
+                StringComparison.OrdinalIgnoreCase))
             ? true
             : (bool?)null;
 
@@ -189,14 +273,23 @@ public class HotelService : IHotelService
         {
             Id = hotel.Id,
             Name = hotel.Name,
+            Address = hotel.Address,
             City = hotel.City,
             Country = hotel.Country,
             Description = hotel.Description,
             Rating = rating,
+            Facilities = facilities,
+            Staff = staff,
+            Cleanliness = cleanliness,
+            Comfort = comfort,
+            Location = location,
+            ValueForMoney = valueForMoney,
             ReviewsCount = reviews.Count,
             MainImageUrl = images.FirstOrDefault() ?? string.Empty,
             Images = images,
-            Amenities = hotel.Amenities.Select(x => x.AmenityName).ToList(),
+            Amenities = hotel.Amenities
+                .Select(x => x.AmenityName)
+                .ToList(),
             HasWifi = hasWifi,
             Rooms = hotel.Rooms.Select(x => new RoomDto
             {

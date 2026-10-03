@@ -37,6 +37,7 @@ public class UserService : IUserService
     public async Task UpdateAsync(
         Guid userId,
         UpdateUserDto dto,
+        string? avatarUrl,
         CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(
@@ -49,6 +50,13 @@ public class UserService : IUserService
         }
 
         _mapper.Map(dto, user);
+
+        user.TravelingWithPet = dto.TravelingWithPet;
+
+        if (avatarUrl != null)
+        {
+            user.AvatarUrl = avatarUrl;
+        }
 
         await _userRepository.UpdateAsync(
             user,

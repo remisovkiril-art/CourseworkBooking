@@ -73,10 +73,18 @@ public class AuthService : IAuthService
             user,
             cancellationToken);
 
-        await _emailService.SendVerificationCodeAsync(
-            user.Email,
-            verificationCode,
-            cancellationToken);
+        try
+        {
+            await _emailService.SendVerificationCodeAsync(
+                user.Email,
+                verificationCode,
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine(
+                $"[DEV] Email not sent: {ex.Message}. Code for {user.Email}: {verificationCode}");
+        }
 
         return CreateResponse(
             user,
@@ -208,6 +216,25 @@ public class AuthService : IAuthService
             string.Empty);
     }
 
+    public async Task<UserReadDto?> GetProfileAsync(string email)
+    {
+        var user = await _userRepository.GetByEmailAsync(
+            email,
+            CancellationToken.None);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new UserReadDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            Name = user.Name
+        };
+    }
+
     private AuthResponseDto CreateResponse(
         User user,
         string verificationCode)
@@ -224,20 +251,5 @@ public class AuthService : IAuthService
         response.VerificationCode = verificationCode;
 
         return response;
-    }
-
-    public async Task<UserReadDto?> GetProfileAsync(string email)
-    {
-        var user = await _userRepository.GetByEmailAsync(email);
-        if (user == null)
-        {
-            return null;
-        }
-        return new UserReadDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            Name = user.Name
-        };
     }
 }
