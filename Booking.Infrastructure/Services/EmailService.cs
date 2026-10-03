@@ -24,13 +24,17 @@ public class EmailService : IEmailService
             string.IsNullOrWhiteSpace(_settings.Password) ||
             string.IsNullOrWhiteSpace(_settings.From))
         {
-            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+            if (Environment.GetEnvironmentVariable(
+                    "ASPNETCORE_ENVIRONMENT") == "Development")
             {
-                Console.WriteLine($"[DEV EMAIL] To: {email}, Code: {code}");
+                Console.WriteLine(
+                    $"[DEV EMAIL] To: {email}, Code: {code}");
+
                 return;
             }
 
-            throw new InvalidOperationException("Email settings are not configured.");
+            throw new InvalidOperationException(
+                "Email settings are not configured.");
         }
 
         using var message = new MailMessage(
@@ -39,14 +43,20 @@ public class EmailService : IEmailService
             "Hotel for you. verification code",
             $"Your verification code is: {code}");
 
-        using var client = new SmtpClient(_settings.Host, _settings.Port)
-        {
-            EnableSsl = _settings.EnableSsl,
-            Credentials = new NetworkCredential(
-                _settings.UserName,
-                _settings.Password)
-        };
+        using var client =
+            new SmtpClient(
+                _settings.Host,
+                _settings.Port)
+            {
+                EnableSsl = _settings.EnableSsl,
+                Credentials =
+                    new NetworkCredential(
+                        _settings.UserName,
+                        _settings.Password)
+            };
 
-        await client.SendMailAsync(message, cancellationToken);
+        await client.SendMailAsync(
+            message,
+            cancellationToken);
     }
 }

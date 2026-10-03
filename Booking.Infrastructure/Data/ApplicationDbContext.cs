@@ -26,7 +26,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
 
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
-    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
