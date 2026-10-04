@@ -36,6 +36,16 @@ public class ReviewRepository : IReviewRepository
         await _context.SaveChangesAsync(
             cancellationToken);
     }
+
+    public async Task<List<Review>?> GetBestReviewsAsync(int count, CancellationToken cancellationToken)
+    {
+        return await _context.Reviews
+            .Include(r => r.User)
+            .OrderByDescending(r => r.Rating)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+
+    }
 }
 
 

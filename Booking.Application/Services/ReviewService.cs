@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Booking.Application.Services;
 
@@ -133,5 +135,31 @@ public class ReviewService : IReviewService
             ValueForMoney = review.ValueForMoney,
             CreatedAt = review.CreatedAt
         };
+    }
+
+    public async Task<List<ReviewDto>?> GetBestReviewsAsync(int count, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"reviews:best:{count}";
+
+        var cached = await _cachingService.GetAsync<List<ReviewDto>>(
+            cacheKey);
+
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        var reviews = await _reviewRepository.GetBestReviewsAsync(
+            count,
+            cancellationToken);
+
+        var result = _mapper.Map<List<ReviewDto>>(reviews);
+
+        await _cachingService.SetAsync(
+            cacheKey,
+            result,
+            null);
+
+        return result;
     }
 }

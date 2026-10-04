@@ -19,4 +19,7 @@ public interface IHotelService
     Task<HotelDto> CreateAsync(
         HotelCreateDto dto,
         CancellationToken cancellationToken);
+
+    Task<List<HotelDto>?> GetRandomAsync(int number,
+       CancellationToken cancellationToken);
 }

@@ -34,7 +34,7 @@ public class HotelService : IHotelService
 
         var result = ApplyBaseFilters(hotels, request);
 
-        // 4. Minimum rating
+        // Minimum rating
         if (request.MinRating.HasValue)
         {
             result = result.Where(h =>
@@ -42,21 +42,21 @@ public class HotelService : IHotelService
                 h.Reviews.Average(r => r.Rating) >= request.MinRating.Value);
         }
 
-        // 5. Stars
+        // Stars
         if (request.Stars.HasValue)
         {
             result = result.Where(h =>
                 h.Stars >= request.Stars.Value);
         }
 
-        // 6. Hotel types
+        //  Hotel types
         if (request.Types != null && request.Types.Length > 0)
         {
             result = result.Where(h =>
                 request.Types.Contains(h.Type));
         }
 
-        // 7. Hotel chains
+        // Hotel chains
         if (request.ChainIds != null && request.ChainIds.Length > 0)
         {
             result = result.Where(h =>
@@ -64,7 +64,7 @@ public class HotelService : IHotelService
                 request.ChainIds.Contains(h.HotelChainId.Value));
         }
 
-        // 8. Amenities
+        // Amenities
         if (request.Amenities != null && request.Amenities.Length > 0)
         {
             foreach (var amenity in request.Amenities)
@@ -77,7 +77,7 @@ public class HotelService : IHotelService
             }
         }
 
-        // 9. Sorting
+        // Sorting
         result = request.Sort?.ToLower() switch
         {
             "rating" =>
@@ -101,10 +101,10 @@ public class HotelService : IHotelService
             _ => result
         };
 
-        // 10. Total до pagination
+        // Total до pagination
         var total = result.Count();
 
-        // 11. Pagination
+        // Pagination
         var page = Math.Max(request.Page, 1);
 
         var pageSize = request.PageSize <= 0
@@ -117,7 +117,7 @@ public class HotelService : IHotelService
             .Select(Map)
             .ToList();
 
-        // 12. Return
+        // Return
         return new HotelSearchResultDto
         {
             Hotels = hotelsResult,
@@ -474,6 +474,32 @@ public class HotelService : IHotelService
         };
     }
 
- 
+    public async Task<List<HotelDto>?> GetRandomAsync(int number, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"hotels:random:{number}";
+
+        var cached = await _cacheService.GetAsync<List<HotelDto>>(
+            cacheKey);
+
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        var hotels = await _hotelRepository.GetRandomHotelsAsync(
+            number,
+            cancellationToken);
+
+        var result = hotels
+        .Select(Map)
+        .ToList();
+
+        await _cacheService.SetAsync(
+            cacheKey,
+            result,
+            null);
+
+        return result;
+    }
 }
 

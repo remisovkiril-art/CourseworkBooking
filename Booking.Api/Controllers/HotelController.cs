@@ -37,6 +37,21 @@ public class HotelController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("random")]
+    public async Task<ActionResult<List<HotelDto>>> GetRandomHotels(
+        [FromQuery] int number = 8,
+        CancellationToken cancellationToken = default)
+    {
+        if (number <= 0)
+            return BadRequest("Number must be greater than 0.");
+
+        var hotels = await _hotelService.GetRandomAsync(
+            number,
+            cancellationToken);
+
+        return Ok(hotels);
+    }
+
     [HttpGet("filters")]
     public async Task<ActionResult<HotelFiltersDto>> GetFilters(
        [FromQuery] HotelSearchDto request,
