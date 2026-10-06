@@ -13,7 +13,8 @@ public class PaymentMethodController : ControllerBase
 {
     private readonly IPaymentMethodService _service;
 
-    public PaymentMethodController(IPaymentMethodService service)
+    public PaymentMethodController(
+        IPaymentMethodService service)
     {
         _service = service;
     }
@@ -22,9 +23,10 @@ public class PaymentMethodController : ControllerBase
     public async Task<IActionResult> Get(
         CancellationToken cancellationToken)
     {
-        return Ok(await _service.GetAsync(
-            GetUserId(),
-            cancellationToken));
+        return Ok(
+            await _service.GetAsync(
+                GetUserId(),
+                cancellationToken));
     }
 
     [HttpPost]
@@ -43,14 +45,21 @@ public class PaymentMethodController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(
+                new
+                {
+                    message = ex.Message
+                });
         }
     }
 
     private Guid GetUserId()
     {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                    ?? throw new Exception("User is not authorized");
+        string value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier)
+            ?? throw new Exception(
+                "User is not authorized");
 
         return Guid.Parse(value);
     }

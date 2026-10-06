@@ -23,4 +23,21 @@ public interface IUserRepository
     Task UpdateAsync(
         User user,
         CancellationToken cancellationToken);
+
+    Task<List<UserTravelPreference>> GetTravelPreferencesAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    Task ReplaceTravelPreferencesAsync(
+        Guid userId,
+        List<UserTravelPreference> preferences,
+        CancellationToken cancellationToken);
+
+    Task<NewsletterSubscription?> GetNewsletterAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    Task SaveNewsletterAsync(
+        NewsletterSubscription newsletter,
+        CancellationToken cancellationToken);
 }

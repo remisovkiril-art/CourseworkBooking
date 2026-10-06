@@ -19,6 +19,7 @@ public class ReviewRepository : IReviewRepository
         CancellationToken cancellationToken)
     {
         return await _context.Reviews
+            .AsNoTracking()
             .Include(x => x.User)
             .Where(x => x.HotelId == hotelId)
             .OrderByDescending(x => x.CreatedAt)
@@ -36,6 +37,33 @@ public class ReviewRepository : IReviewRepository
         await _context.SaveChangesAsync(
             cancellationToken);
     }
+    public async Task<Review?> GetByIdAsync(
+    Guid reviewId,
+    CancellationToken cancellationToken)
+    {
+        return await _context.Reviews
+            .FirstOrDefaultAsync(
+                x => x.Id == reviewId,
+                cancellationToken);
+    }
+    public async Task DeleteAsync(
+        Guid reviewId,
+        CancellationToken cancellationToken)
+    {
+        Review? review =
+            await _context.Reviews
+                .FirstOrDefaultAsync(
+                    x => x.Id == reviewId,
+                    cancellationToken);
+
+        if (review == null)
+        {
+            throw new Exception("Review not found");
+        }
+
+        _context.Reviews.Remove(review);
+
+        await _context.SaveChangesAsync(
+            cancellationToken);
+    }
 }
-
-

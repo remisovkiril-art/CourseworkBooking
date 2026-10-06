@@ -8,7 +8,12 @@ public interface IImageService
         CancellationToken cancellationToken);
 
     Task<string> SaveUserAvatarAsync(
-     Stream stream,
-     string fileName,
-     CancellationToken cancellationToken);
+        Stream stream,
+        string fileName,
+        CancellationToken cancellationToken);
+
+    Task<string> SaveRoomImageAsync(
+        Stream stream,
+        string fileName,
+        CancellationToken cancellationToken);
 }

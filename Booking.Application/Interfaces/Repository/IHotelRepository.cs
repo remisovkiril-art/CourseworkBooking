@@ -1,10 +1,12 @@
-﻿using Booking.Domain.Entities;
+﻿using Booking.Application.DTOs.Hotels;
+using Booking.Domain.Entities;
 
 namespace Booking.Application.Interfaces.Repository;
 
 public interface IHotelRepository
 {
-    Task<List<Hotel>> GetAllAsync(
+    Task<List<Hotel>> SearchAsync(
+        HotelSearchDto dto,
         CancellationToken cancellationToken);
 
     Task<Hotel?> GetByIdAsync(
@@ -21,5 +23,9 @@ public interface IHotelRepository
 
     Task AddImageAsync(
         HotelImage image,
+        CancellationToken cancellationToken);
+
+    Task DeleteAsync(
+        Guid id,
         CancellationToken cancellationToken);
 }

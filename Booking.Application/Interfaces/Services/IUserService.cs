@@ -11,6 +11,24 @@ public interface IUserService
     Task UpdateAsync(
         Guid userId,
         UpdateUserDto dto,
-         string? avatarUrl,
+        string? avatarUrl,
+        CancellationToken cancellationToken);
+
+    Task<TravelPreferencesDto> GetTravelPreferencesAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    Task SaveTravelPreferencesAsync(
+        Guid userId,
+        TravelPreferencesDto dto,
+        CancellationToken cancellationToken);
+
+    Task<NewsletterDto?> GetNewsletterAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    Task SaveNewsletterAsync(
+        Guid userId,
+        NewsletterDto dto,
         CancellationToken cancellationToken);
 }

@@ -1,4 +1,5 @@
-﻿using Booking.Application.Interfaces.Repository;
+﻿using Booking.Application.DTOs.Hotels;
+using Booking.Application.Interfaces.Repository;
 using Booking.Domain.Entities;
 using Booking.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -14,18 +15,34 @@ public class HotelRepository : IHotelRepository
         _context = context;
     }
 
-    public async Task<List<Hotel>> GetAllAsync(
+    public async Task<List<Hotel>> SearchAsync(
+        HotelSearchDto dto,
         CancellationToken cancellationToken)
     {
-        return await _context.Hotels
-            .AsSplitQuery()
-            .Include(x => x.Rooms)
-                .ThenInclude(x => x.Bookings)
-            .Include(x => x.Amenities)
-            .Include(x => x.Images)
-            .Include(x => x.Reviews)
-                .ThenInclude(x => x.User)
-            .ToListAsync(cancellationToken);
+        IQueryable<Hotel> query =
+            _context.Hotels
+                .AsNoTracking()
+                .Include(x => x.Rooms)
+                    .ThenInclude(x => x.Bookings)
+                .Include(x => x.Amenities)
+                .Include(x => x.Images)
+                .Include(x => x.Reviews)
+                    .ThenInclude(x => x.User)
+                .AsSplitQuery();
+
+        if (!string.IsNullOrWhiteSpace(dto.Search))
+        {
+            string search =
+                dto.Search.Trim();
+
+            query = query.Where(x =>
+                EF.Functions.Like(
+                    x.Name,
+                    search + "%"));
+        }
+
+        return await query.ToListAsync(
+            cancellationToken);
     }
 
     public async Task<Hotel?> GetByIdAsync(
@@ -33,13 +50,14 @@ public class HotelRepository : IHotelRepository
         CancellationToken cancellationToken)
     {
         return await _context.Hotels
-            .AsSplitQuery()
+            .AsNoTracking()
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
             .Include(x => x.Images)
             .Include(x => x.Reviews)
                 .ThenInclude(x => x.User)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(
                 x => x.Id == id,
                 cancellationToken);
@@ -74,6 +92,28 @@ public class HotelRepository : IHotelRepository
         await _context.HotelImages.AddAsync(
             image,
             cancellationToken);
+
+        await _context.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        Hotel? hotel =
+            await _context.Hotels
+                .FirstOrDefaultAsync(
+                    x => x.Id == id,
+                    cancellationToken);
+
+        if (hotel == null)
+        {
+            throw new Exception(
+                "Hotel not found");
+        }
+
+        _context.Hotels.Remove(hotel);
 
         await _context.SaveChangesAsync(
             cancellationToken);

@@ -27,22 +27,13 @@ public class HotelController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> GetHotels(
-        string? search,
-        int adults = 0,
-        int children = 0,
-        int rooms = 0,
-        DateTime? checkIn = null,
-        DateTime? checkOut = null,
-        CancellationToken cancellationToken = default)
+        [FromQuery] HotelSearchDto dto,
+        CancellationToken cancellationToken)
     {
-        var result = await _hotelService.GetAllAsync(
-            search,
-            adults,
-            children,
-            rooms,
-            checkIn,
-            checkOut,
-            cancellationToken);
+        HotelSearchResultDto result =
+            await _hotelService.SearchAsync(
+                dto,
+                cancellationToken);
 
         return Ok(result);
     }
@@ -52,14 +43,20 @@ public class HotelController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var result = await _hotelService.GetByIdAsync(
-            id,
-            cancellationToken);
+        HotelDto? result =
+            await _hotelService.GetByIdAsync(
+                id,
+                cancellationToken);
 
-        return result == null ? NotFound() : Ok(result);
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
     }
 
-    [Authorize]
+    [Authorize(Roles = "1")]
     [HttpPost]
     public async Task<IActionResult> CreateHotel(
         HotelCreateDto dto,
@@ -67,36 +64,75 @@ public class HotelController : ControllerBase
     {
         try
         {
-            var result = await _hotelService.CreateAsync(
-                dto,
-                cancellationToken);
+            HotelDto result =
+                await _hotelService.CreateAsync(
+                    dto,
+                    cancellationToken);
 
             return Ok(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
 
-    [Authorize]
+    [Authorize(Roles = "1")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteHotel(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _hotelService.DeleteAsync(
+                id,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    [Authorize(Roles = "1")]
     [HttpPost("{id:guid}/image")]
     public async Task<IActionResult> UploadImage(
         Guid id,
         IFormFile file,
         CancellationToken cancellationToken)
     {
-        var hotel = await _hotelRepository.GetByIdAsync(
-            id,
-            cancellationToken);
+        Hotel? hotel =
+            await _hotelRepository.GetByIdAsync(
+                id,
+                cancellationToken);
 
         if (hotel == null)
-            return NotFound(new { message = "Hotel not found" });
+        {
+            return NotFound(new
+            {
+                message = "Hotel not found"
+            });
+        }
 
-        if (file == null || file.Length == 0)
-            return BadRequest(new { message = "Image is empty" });
+        if (file == null ||
+            file.Length == 0)
+        {
+            return BadRequest(new
+            {
+                message = "Image is empty"
+            });
+        }
 
-        var allowedTypes = new[]
+        string[] allowedTypes =
         {
             "image/jpeg",
             "image/png",
@@ -104,26 +140,38 @@ public class HotelController : ControllerBase
         };
 
         if (!allowedTypes.Contains(file.ContentType))
-            return BadRequest(new { message = "Only JPG, PNG and WEBP files are allowed" });
-
-        await using var stream = file.OpenReadStream();
-
-        var url = await _imageService.SaveHotelImageAsync(
-            stream,
-            file.FileName,
-            cancellationToken);
-
-        var image = new HotelImage
         {
-            Id = Guid.NewGuid(),
-            HotelId = id,
-            ImageUrl = url
-        };
+            return BadRequest(new
+            {
+                message =
+                    "Only JPG, PNG and WEBP files are allowed"
+            });
+        }
+
+        await using Stream stream =
+            file.OpenReadStream();
+
+        string url =
+            await _imageService.SaveHotelImageAsync(
+                stream,
+                file.FileName,
+                cancellationToken);
+
+        HotelImage image =
+            new HotelImage
+            {
+                Id = Guid.NewGuid(),
+                HotelId = id,
+                ImageUrl = url
+            };
 
         await _hotelRepository.AddImageAsync(
             image,
             cancellationToken);
 
-        return Ok(new { imageUrl = url });
+        return Ok(new
+        {
+            imageUrl = url
+        });
     }
 }

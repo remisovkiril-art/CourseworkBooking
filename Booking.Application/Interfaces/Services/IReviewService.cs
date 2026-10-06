@@ -12,4 +12,8 @@ public interface IReviewService
         Guid userId,
         CreateReviewDto dto,
         CancellationToken cancellationToken);
+
+    Task DeleteAsync(
+        Guid reviewId,
+        CancellationToken cancellationToken);
 }
