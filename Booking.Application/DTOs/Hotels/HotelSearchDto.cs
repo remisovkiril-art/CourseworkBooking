@@ -23,6 +23,10 @@ public class HotelSearchDto
 
     public HotelType[]? Types { get; set; }
 
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+
+
     public int[]? ChainIds { get; set; }
 
     public string[]? Amenities { get; set; }

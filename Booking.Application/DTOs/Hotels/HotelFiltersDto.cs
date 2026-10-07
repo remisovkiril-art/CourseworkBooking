@@ -10,6 +10,9 @@ namespace Booking.Application.DTOs.Hotels;
 
 public class HotelFiltersDto
 {
+    public decimal MinPrice { get; set; }
+    public decimal MaxPrice { get; set; }
+
     public List<RatingFilterDto> Ratings { get; set; } = [];
 
     public List<StarsFilterDto> Stars { get; set; } = [];

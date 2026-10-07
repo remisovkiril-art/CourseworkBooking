@@ -27,57 +27,13 @@ public class HotelService : IHotelService
     }
 
     public async Task<HotelSearchResultDto> GetAllAsync(
-        HotelSearchDto request,
-        CancellationToken cancellationToken)
+     HotelSearchDto request,
+     CancellationToken cancellationToken)
     {
         var hotels = await _hotelRepository.GetAllAsync(cancellationToken);
 
-        var result = ApplyBaseFilters(hotels, request);
+        var result = ApplyFilters(hotels, request);
 
-        // Minimum rating
-        if (request.MinRating.HasValue)
-        {
-            result = result.Where(h =>
-                h.Reviews.Any() &&
-                h.Reviews.Average(r => r.Rating) >= request.MinRating.Value);
-        }
-
-        // Stars
-        if (request.Stars.HasValue)
-        {
-            result = result.Where(h =>
-                h.Stars >= request.Stars.Value);
-        }
-
-        //  Hotel types
-        if (request.Types != null && request.Types.Length > 0)
-        {
-            result = result.Where(h =>
-                request.Types.Contains(h.Type));
-        }
-
-        // Hotel chains
-        if (request.ChainIds != null && request.ChainIds.Length > 0)
-        {
-            result = result.Where(h =>
-                h.HotelChainId.HasValue &&
-                request.ChainIds.Contains(h.HotelChainId.Value));
-        }
-
-        // Amenities
-        if (request.Amenities != null && request.Amenities.Length > 0)
-        {
-            foreach (var amenity in request.Amenities)
-            {
-                result = result.Where(h =>
-                    h.Amenities.Any(a =>
-                        a.AmenityName.Equals(
-                            amenity,
-                            StringComparison.OrdinalIgnoreCase)));
-            }
-        }
-
-        // Sorting
         result = request.Sort?.ToLower() switch
         {
             "rating" =>
@@ -101,14 +57,12 @@ public class HotelService : IHotelService
             _ => result
         };
 
-        // Total до pagination
         var total = result.Count();
 
-        // Pagination
         var page = Math.Max(request.Page, 1);
 
         var pageSize = request.PageSize <= 0
-            ? 20
+            ? 7
             : request.PageSize;
 
         var hotelsResult = result
@@ -117,7 +71,6 @@ public class HotelService : IHotelService
             .Select(Map)
             .ToList();
 
-        // Return
         return new HotelSearchResultDto
         {
             Hotels = hotelsResult,
@@ -128,58 +81,116 @@ public class HotelService : IHotelService
     }
 
 
+
     public async Task<HotelFiltersDto> GetFiltersAsync(
-    HotelSearchDto request,
-    CancellationToken cancellationToken)
+        HotelSearchDto request,
+        CancellationToken cancellationToken)
     {
-        var hotels = await _hotelRepository.GetAllAsync(cancellationToken);
+        var hotels = await _hotelRepository.GetAllAsync(
+            cancellationToken);
+
+        var allHotels = hotels;
+
+        var prices = allHotels
+            .SelectMany(h => h.Rooms)
+            .Select(r => r.PricePerNight)
+            .ToList();
+
+        var minPrice = prices.Any()
+            ? prices.Min()
+            : 0;
+
+        var maxPrice = prices.Any()
+            ? prices.Max()
+            : 0;
 
 
-        var result = ApplyBaseFilters(hotels, request);
+        var result = ApplyFilters(
+            allHotels,
+            request);
 
         var hotelsList = result.ToList();
 
-        // Rating
+
+        // Rating counts:
+        // враховуємо всі фільтри, крім MinRating
+        var ratingHotels = ApplyFilters(
+            hotels,
+            request,
+            applyRating: false
+        ).ToList();
+
+        // Stars counts:
+        // враховуємо всі фільтри, крім Stars
+        var starsHotels = ApplyFilters(
+            hotels,
+            request,
+            applyStars: false
+        ).ToList();
+
+        // Types counts:
+        // враховуємо всі фільтри, крім Types
+        var typeHotels = ApplyFilters(
+            hotels,
+            request,
+            applyTypes: false
+        ).ToList();
+
+        // Chains counts:
+        // враховуємо всі фільтри, крім ChainIds
+        var chainHotels = ApplyFilters(
+            hotels,
+            request,
+            applyChains: false
+        ).ToList();
+
+        // Amenities counts:
+        // враховуємо всі фільтри, крім Amenities
+        var amenityHotels = ApplyFilters(
+            hotels,
+            request,
+            applyAmenities: false
+        ).ToList();
+
+
 
         var ratings = new List<RatingFilterDto>
-    {
-        new()
         {
-            MinRating = 9,
-            Count = hotelsList.Count(h =>
-                h.Reviews.Any() &&
-                h.Reviews.Average(r => r.Rating) >= 9)
-        },
+            new()
+            {
+                MinRating = 9,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 9)
+            },
 
-        new()
-        {
-            MinRating = 8,
-            Count = hotelsList.Count(h =>
-                h.Reviews.Any() &&
-                h.Reviews.Average(r => r.Rating) >= 8)
-        },
+            new()
+            {
+                MinRating = 8,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 8)
+            },
 
-        new()
-        {
-            MinRating = 7,
-            Count = hotelsList.Count(h =>
-                h.Reviews.Any() &&
-                h.Reviews.Average(r => r.Rating) >= 7)
-        },
+            new()
+            {
+                MinRating = 7,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 7)
+            },
 
-        new()
-        {
-            MinRating = 6,
-            Count = hotelsList.Count(h =>
-                h.Reviews.Any() &&
-                h.Reviews.Average(r => r.Rating) >= 6)
-        }
-    };
+            new()
+            {
+                MinRating = 6,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 6)
+            }
+        };
 
-       
-        // Stars
 
-        var stars = hotelsList
+        var stars = starsHotels
             .GroupBy(h => h.Stars)
             .OrderByDescending(g => g.Key)
             .Select(g => new StarsFilterDto
@@ -189,9 +200,8 @@ public class HotelService : IHotelService
             })
             .ToList();
 
-        // Types
 
-        var types = hotelsList
+        var types = typeHotels
             .GroupBy(h => h.Type)
             .Select(g => new HotelTypeFilterDto
             {
@@ -200,9 +210,8 @@ public class HotelService : IHotelService
             })
             .ToList();
 
-        // Chains
 
-        var chains = hotelsList
+        var chains = chainHotels
             .Where(h => h.HotelChain != null)
             .GroupBy(h => new
             {
@@ -215,17 +224,19 @@ public class HotelService : IHotelService
                 Name = g.Key.Name,
                 Count = g.Count()
             })
+            .OrderByDescending(x => x.Count)
             .ToList();
 
-        // Amenities
 
-        var amenities = hotelsList
+        var amenities = amenityHotels
             .SelectMany(h => h.Amenities)
             .GroupBy(a => a.AmenityName)
             .Select(g => new AmenityFilterDto
             {
                 Name = g.Key,
-                Count = g.Select(a => a.HotelId).Distinct().Count()
+                Count = g.Select(a => a.HotelId)
+                    .Distinct()
+                    .Count()
             })
             .OrderByDescending(x => x.Count)
             .ToList();
@@ -236,7 +247,9 @@ public class HotelService : IHotelService
             Stars = stars,
             Types = types,
             Chains = chains,
-            Amenities = amenities
+            Amenities = amenities,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice
         };
     }
 
@@ -473,6 +486,79 @@ public class HotelService : IHotelService
             Reviews = _mapper.Map<List<ReviewDto>>(hotel.Reviews)
         };
     }
+
+    private IEnumerable<Hotel> ApplyFilters(
+            IEnumerable<Hotel> hotels,
+            HotelSearchDto request,
+            bool applyRating = true,
+            bool applyStars = true,
+            bool applyTypes = true,
+            bool applyChains = true,
+            bool applyAmenities = true)
+    {
+        var result = ApplyBaseFilters(hotels, request);
+
+        if (applyRating && request.MinRating.HasValue)
+        {
+            result = result.Where(h =>
+                h.Reviews.Any() &&
+                h.Reviews.Average(r => r.Rating)
+                    >= request.MinRating.Value);
+        }
+
+        if (applyStars && request.Stars.HasValue)
+        {
+            result = result.Where(h => h.Stars == request.Stars.Value);
+        }
+
+        if (applyTypes &&
+            request.Types != null &&
+            request.Types.Length > 0)
+        {
+            result = result.Where(h =>
+                request.Types.Contains(h.Type));
+        }
+
+        if (applyChains &&
+            request.ChainIds != null &&
+            request.ChainIds.Length > 0)
+        {
+            result = result.Where(h =>
+                h.HotelChainId.HasValue &&
+                request.ChainIds.Contains(h.HotelChainId.Value));
+        }
+
+        if (applyAmenities &&
+            request.Amenities != null &&
+            request.Amenities.Length > 0)
+        {
+            foreach (var amenity in request.Amenities)
+            {
+                result = result.Where(h =>
+                    h.Amenities.Any(a =>
+                        a.AmenityName.Equals(
+                            amenity,
+                            StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+
+        if (request.MinPrice.HasValue ||
+        request.MaxPrice.HasValue)
+        {
+            result = result.Where(h =>
+                h.Rooms.Any(r =>
+                    (!request.MinPrice.HasValue ||
+                     r.PricePerNight >= request.MinPrice.Value)
+                    &&
+                    (!request.MaxPrice.HasValue ||
+                     r.PricePerNight <= request.MaxPrice.Value)
+                ));
+        }
+
+        return result;
+    }
+
 
     public async Task<List<HotelDto>?> GetRandomAsync(int number, CancellationToken cancellationToken)
     {

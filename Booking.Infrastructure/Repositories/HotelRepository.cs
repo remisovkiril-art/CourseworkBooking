@@ -19,6 +19,7 @@ public class HotelRepository : IHotelRepository
     {
         return await _context.Hotels
             .AsSplitQuery()
+            .Include(h => h.HotelChain)
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
