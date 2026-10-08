@@ -12,7 +12,8 @@ public class ReviewController : ControllerBase
 {
     private readonly IReviewService _reviewService;
 
-    public ReviewController(IReviewService reviewService)
+    public ReviewController(
+        IReviewService reviewService)
     {
         _reviewService = reviewService;
     }
@@ -22,10 +23,22 @@ public class ReviewController : ControllerBase
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var result =
+        List<ReviewDto> result =
             await _reviewService.GetByHotelIdAsync(
                 hotelId,
                 cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("best")]
+    public async Task<ActionResult<List<ReviewDto>>> GetBestReviews(
+        CancellationToken cancellationToken,
+        [FromQuery] int count = 3)
+    {
+        var result = await _reviewService.GetBestReviewsAsync(
+            count,
+            cancellationToken);
 
         return Ok(result);
     }
@@ -38,9 +51,9 @@ public class ReviewController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
+            Guid userId = GetUserId();
 
-            var result =
+            ReviewDto result =
                 await _reviewService.AddAsync(
                     userId,
                     dto,
@@ -57,10 +70,34 @@ public class ReviewController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "1,2")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _reviewService.DeleteAsync(
+                id,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
     private Guid GetUserId()
     {
-        var value = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
+        string? value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(value))
         {

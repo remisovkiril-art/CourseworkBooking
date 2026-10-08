@@ -15,17 +15,27 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Hotel> Hotels => Set<Hotel>();
 
-    public DbSet<HotelAmenity> HotelAmenities => Set<HotelAmenity>();
+    public DbSet<HotelAmenity> HotelAmenities =>
+        Set<HotelAmenity>();
 
-    public DbSet<HotelImage> HotelImages => Set<HotelImage>();
+    public DbSet<HotelImage> HotelImages =>
+        Set<HotelImage>();
 
     public DbSet<Room> Rooms => Set<Room>();
 
     public DbSet<Review> Reviews => Set<Review>();
 
-    public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
+    public DbSet<BookingEntity> Bookings =>
+        Set<BookingEntity>();
 
-    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
+    public DbSet<PaymentMethod> PaymentMethods =>
+        Set<PaymentMethod>();
+
+    public DbSet<UserTravelPreference> UserTravelPreferences =>
+        Set<UserTravelPreference>();
+
+    public DbSet<NewsletterSubscription> NewsletterSubscriptions =>
+        Set<NewsletterSubscription>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -64,6 +74,19 @@ public class ApplicationDbContext : DbContext
             .HasOne(x => x.Hotel)
             .WithMany(x => x.Rooms)
             .HasForeignKey(x => x.HotelId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserTravelPreference>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.TravelPreferences)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<NewsletterSubscription>()
+            .HasOne(x => x.User)
+            .WithOne(x => x.NewsletterSubscription)
+            .HasForeignKey<NewsletterSubscription>(
+                x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -1,21 +1,19 @@
 ﻿using AutoMapper;
 using Booking.Application.DTOs.Hotels;
+using Booking.Application.DTOs.Rooms;
 using Booking.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Booking.Application.Mapping;
 
-public class RoomProfile:Profile
+public class RoomProfile : Profile
 {
-    public RoomProfile() {
-
+    public RoomProfile()
+    {
         CreateMap<Room, RoomDto>();
-        CreateMap<RoomCreateDto, Room>();
 
+        CreateMap<RoomCreateDto, Room>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Hotel, opt => opt.Ignore())
+            .ForMember(dest => dest.Bookings, opt => opt.Ignore());
     }
-    
 }

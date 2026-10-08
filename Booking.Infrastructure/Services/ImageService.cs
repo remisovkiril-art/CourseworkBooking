@@ -7,7 +7,8 @@ public class ImageService : IImageService
 {
     private readonly IHostEnvironment _environment;
 
-    public ImageService(IHostEnvironment environment)
+    public ImageService(
+        IHostEnvironment environment)
     {
         _environment = environment;
     }
@@ -17,30 +18,35 @@ public class ImageService : IImageService
         string fileName,
         CancellationToken cancellationToken)
     {
-        var folder = Path.Combine(
-            _environment.ContentRootPath,
-            "wwwroot",
-            "hotels");
+        string folder =
+            Path.Combine(
+                _environment.ContentRootPath,
+                "wwwroot",
+                "hotels");
 
         Directory.CreateDirectory(folder);
 
-        var extension = Path.GetExtension(fileName);
+        string extension =
+            Path.GetExtension(fileName)
+                .ToLowerInvariant();
 
         if (string.IsNullOrEmpty(extension))
         {
             extension = ".jpg";
         }
 
-        var newFileName =
+        string newFileName =
             $"{Guid.NewGuid()}{extension}";
 
-        var path = Path.Combine(
-            folder,
-            newFileName);
+        string path =
+            Path.Combine(
+                folder,
+                newFileName);
 
-        await using var fileStream = new FileStream(
-            path,
-            FileMode.Create);
+        await using FileStream fileStream =
+            new FileStream(
+                path,
+                FileMode.Create);
 
         await stream.CopyToAsync(
             fileStream,
@@ -48,43 +54,106 @@ public class ImageService : IImageService
 
         return $"/hotels/{newFileName}";
     }
+
     public async Task<string> SaveUserAvatarAsync(
         Stream stream,
         string fileName,
         CancellationToken cancellationToken)
     {
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        string[] allowedExtensions =
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        };
 
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        string extension =
+            Path.GetExtension(fileName)
+                .ToLowerInvariant();
 
         if (!allowedExtensions.Contains(extension))
         {
-            throw new Exception("Unsupported image format.");
+            throw new Exception(
+                "Unsupported image format.");
         }
 
-        var folder = Path.Combine(
-            _environment.ContentRootPath,
-            "wwwroot",
-            "avatars");
+        string folder =
+            Path.Combine(
+                _environment.ContentRootPath,
+                "wwwroot",
+                "avatars");
 
         Directory.CreateDirectory(folder);
 
-
-        var newFileName =
+        string newFileName =
             $"{Guid.NewGuid()}{extension}";
 
-        var path = Path.Combine(
-            folder,
-            newFileName);
+        string path =
+            Path.Combine(
+                folder,
+                newFileName);
 
-        await using var fileStream = new FileStream(
-            path,
-            FileMode.Create);
+        await using FileStream fileStream =
+            new FileStream(
+                path,
+                FileMode.Create);
 
         await stream.CopyToAsync(
             fileStream,
             cancellationToken);
 
         return $"/avatars/{newFileName}";
+    }
+
+    public async Task<string> SaveRoomImageAsync(
+        Stream stream,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        string[] allowedExtensions =
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        };
+
+        string extension =
+            Path.GetExtension(fileName)
+                .ToLowerInvariant();
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            throw new Exception(
+                "Unsupported image format.");
+        }
+
+        string folder =
+            Path.Combine(
+                _environment.ContentRootPath,
+                "wwwroot",
+                "rooms");
+
+        Directory.CreateDirectory(folder);
+
+        string newFileName =
+            $"{Guid.NewGuid()}{extension}";
+
+        string path =
+            Path.Combine(
+                folder,
+                newFileName);
+
+        await using FileStream fileStream =
+            new FileStream(
+                path,
+                FileMode.Create);
+
+        await stream.CopyToAsync(
+            fileStream,
+            cancellationToken);
+
+        return $"/rooms/{newFileName}";
     }
 }

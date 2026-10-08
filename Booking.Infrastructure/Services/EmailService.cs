@@ -24,36 +24,36 @@ public class EmailService : IEmailService
             string.IsNullOrWhiteSpace(_settings.Password) ||
             string.IsNullOrWhiteSpace(_settings.From))
         {
-            if (Environment.GetEnvironmentVariable(
-                    "ASPNETCORE_ENVIRONMENT") == "Development")
-            {
-                Console.WriteLine(
-                    $"[DEV EMAIL] To: {email}, Code: {code}");
-
-                return;
-            }
-
             throw new InvalidOperationException(
                 "Email settings are not configured.");
         }
 
-        using var message = new MailMessage(
-            _settings.From,
-            email,
-            "Hotel for you. verification code",
-            $"Your verification code is: {code}");
+        using MailMessage message = new MailMessage();
 
-        using var client =
+        message.From = new MailAddress(
+            _settings.From);
+
+        message.To.Add(
+            new MailAddress(email));
+
+        message.Subject =
+            "Hotel for you. Verification code";
+
+        message.Body =
+            $"Your verification code is: {code}\n\n" +
+            "The code is valid for 10 minutes.";
+
+        using SmtpClient client =
             new SmtpClient(
                 _settings.Host,
-                _settings.Port)
-            {
-                EnableSsl = _settings.EnableSsl,
-                Credentials =
-                    new NetworkCredential(
-                        _settings.UserName,
-                        _settings.Password)
-            };
+                _settings.Port);
+
+        client.EnableSsl = _settings.EnableSsl;
+
+        client.Credentials =
+            new NetworkCredential(
+                _settings.UserName,
+                _settings.Password);
 
         await client.SendMailAsync(
             message,

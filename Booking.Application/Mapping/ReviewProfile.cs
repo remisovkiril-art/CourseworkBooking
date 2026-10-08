@@ -12,16 +12,46 @@ public class ReviewProfile : Profile
             .ForMember(
                 destination => destination.Comment,
                 options => options.MapFrom(source => source.Text)
+            )
+            .ForMember(
+                destination => destination.Id,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.UserId,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.CreatedAt,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.Hotel,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.User,
+                options => options.Ignore()
             );
 
         CreateMap<Review, ReviewDto>()
             .ForMember(
-                destination => destination.Text,
-                options => options.MapFrom(source => source.Comment)
+                destination => destination.AuthorName,
+                options => options.MapFrom(source =>
+                    source.User != null
+                        ? source.User.Name
+                        : "User")
             )
             .ForMember(
-                destination => destination.AuthorName,
-                options => options.MapFrom(source => source.User.Name)
+                destination => destination.AuthorAvatarUrl,
+                options => options.MapFrom(source =>
+                    source.User != null
+                        ? source.User.AvatarUrl
+                        : null)
+            )
+            .ForMember(
+                destination => destination.Text,
+                options => options.MapFrom(source => source.Comment)
             );
     }
 }

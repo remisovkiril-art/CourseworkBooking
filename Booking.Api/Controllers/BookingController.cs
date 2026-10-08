@@ -12,10 +12,13 @@ namespace Booking.Api.Controllers;
 public class BookingController : ControllerBase
 {
     private readonly IBookingService _bookingService;
-
-    public BookingController(IBookingService bookingService)
+    private readonly IPdfService _pdfService;
+    public BookingController(
+        IBookingService bookingService,
+        IPdfService pdfService)
     {
         _bookingService = bookingService;
+        _pdfService = pdfService;
     }
 
     [HttpPost]
@@ -25,12 +28,13 @@ public class BookingController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
+            Guid userId = GetUserId();
 
-            var result = await _bookingService.CreateAsync(
-                userId,
-                dto,
-                cancellationToken);
+            BookingDto result =
+                await _bookingService.CreateAsync(
+                    userId,
+                    dto,
+                    cancellationToken);
 
             return Ok(result);
         }
@@ -42,11 +46,27 @@ public class BookingController : ControllerBase
             });
         }
     }
+    [HttpGet("{bookingId:guid}/pdf")]
+    public async Task<IActionResult> GetPdf(
+    Guid bookingId,
+    CancellationToken cancellationToken)
+    {
+        byte[] pdf =
+            await _pdfService.GenerateBookingPdfAsync(
+                bookingId,
+                GetUserId(),
+                cancellationToken);
 
+        return File(
+            pdf,
+            "application/pdf",
+            $"booking-{bookingId}.pdf");
+    }
     private Guid GetUserId()
     {
-        var value = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
+        string? value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(value))
         {
@@ -57,4 +77,3 @@ public class BookingController : ControllerBase
         return Guid.Parse(value);
     }
 }
-

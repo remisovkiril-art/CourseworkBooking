@@ -13,6 +13,7 @@ public class AuthService : IAuthService
     private readonly IJwtService _jwtService;
     private readonly IEmailService _emailService;
     private readonly JwtSettings _jwtSettings;
+    private readonly AdminSettings _adminSettings;
     private readonly IMapper _mapper;
 
     public AuthService(
@@ -20,16 +21,18 @@ public class AuthService : IAuthService
         IJwtService jwtService,
         IEmailService emailService,
         JwtSettings jwtSettings,
+        AdminSettings adminSettings,
         IMapper mapper)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
         _emailService = emailService;
         _jwtSettings = jwtSettings;
+        _adminSettings = adminSettings;
         _mapper = mapper;
     }
 
-    public async Task<AuthResponseDto> RegisterAsync(
+    public async Task<VerificationRequiredDto> RegisterAsync(
         RegisterDto dto,
         CancellationToken cancellationToken)
     {
@@ -43,7 +46,12 @@ public class AuthService : IAuthService
             throw new Exception("Password is required");
         }
 
-        var existingUser = await _userRepository.GetByEmailAsync(
+        if (dto.Password.Length < 6)
+        {
+            throw new Exception("Password must contain at least 6 characters");
+        }
+
+        User? existingUser = await _userRepository.GetByEmailAsync(
             dto.Email,
             cancellationToken);
 
@@ -52,50 +60,53 @@ public class AuthService : IAuthService
             throw new Exception("User with this email already exists");
         }
 
-        var verificationCode =
-            Random.Shared.Next(100000, 1000000).ToString();
+        string verificationCode = GenerateCode();
 
-        var user = new User
+        int role = 0;
+
+        if (!string.IsNullOrWhiteSpace(_adminSettings.FirstAdminEmail) &&
+            dto.Email.Equals(
+                _adminSettings.FirstAdminEmail,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            role = 1;
+        }
+
+        User user = new User
         {
             Id = Guid.NewGuid(),
-            Email = dto.Email,
+            Name = dto.Name,
+            Email = dto.Email.Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             VerificationCode = verificationCode,
-            IsVerified = false
+            VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            VerificationPurpose = "Registration",
+            IsVerified = false,
+            Role = role
         };
-
-        user.RefreshToken = _jwtService.GenerateRefreshToken();
-
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
-            _jwtSettings.RefreshTokenDays);
 
         await _userRepository.AddAsync(
             user,
             cancellationToken);
 
-        try
-        {
-            await _emailService.SendVerificationCodeAsync(
-                user.Email,
-                verificationCode,
-                cancellationToken);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine(
-                $"[DEV] Email not sent: {ex.Message}. Code for {user.Email}: {verificationCode}");
-        }
+        await _emailService.SendVerificationCodeAsync(
+            user.Email,
+            verificationCode,
+            cancellationToken);
 
-        return CreateResponse(
-            user,
-            verificationCode);
+        return new VerificationRequiredDto
+        {
+            Email = user.Email,
+            Purpose = "Registration",
+            Message = "Verification code has been sent to your email."
+        };
     }
 
-    public async Task<AuthResponseDto> LoginAsync(
+    public async Task<VerificationRequiredDto> LoginAsync(
         LoginDto dto,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(
+        User? user = await _userRepository.GetByEmailAsync(
             dto.Email,
             cancellationToken);
 
@@ -104,7 +115,7 @@ public class AuthService : IAuthService
             throw new Exception("Invalid email or password");
         }
 
-        var validPassword = BCrypt.Net.BCrypt.Verify(
+        bool validPassword = BCrypt.Net.BCrypt.Verify(
             dto.Password,
             user.PasswordHash);
 
@@ -113,25 +124,34 @@ public class AuthService : IAuthService
             throw new Exception("Invalid email or password");
         }
 
-        user.RefreshToken = _jwtService.GenerateRefreshToken();
+        string verificationCode = GenerateCode();
 
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
-            _jwtSettings.RefreshTokenDays);
+        user.VerificationCode = verificationCode;
+        user.VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(10);
+        user.VerificationPurpose = "Login";
 
         await _userRepository.UpdateAsync(
             user,
             cancellationToken);
 
-        return CreateResponse(
-            user,
-            user.VerificationCode);
+        await _emailService.SendVerificationCodeAsync(
+            user.Email,
+            verificationCode,
+            cancellationToken);
+
+        return new VerificationRequiredDto
+        {
+            Email = user.Email,
+            Purpose = "Login",
+            Message = "Login verification code has been sent to your email."
+        };
     }
 
     public async Task<AuthResponseDto> VerifyAsync(
         VerifyCodeDto dto,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(
+        User? user = await _userRepository.GetByEmailAsync(
             dto.Email,
             cancellationToken);
 
@@ -140,16 +160,47 @@ public class AuthService : IAuthService
             throw new Exception("User not found");
         }
 
-        if (user.VerificationCode != dto.Code)
+        if (!string.Equals(
+                user.VerificationCode,
+                dto.Code,
+                StringComparison.Ordinal))
         {
             throw new Exception("Invalid verification code");
         }
 
-        user.IsVerified = true;
+        if (user.VerificationCodeExpiresAt == null ||
+            user.VerificationCodeExpiresAt < DateTime.UtcNow)
+        {
+            throw new Exception("Verification code has expired");
+        }
+
+        if (!string.Equals(
+                user.VerificationPurpose,
+                dto.Purpose,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new Exception("Invalid verification purpose");
+        }
+
+        if (dto.Purpose.Equals(
+                "Registration",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            user.IsVerified = true;
+        }
+
+        if (dto.Purpose.Equals(
+                "Login",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            user.IsVerified = true;
+        }
+
         user.VerificationCode = string.Empty;
+        user.VerificationCodeExpiresAt = null;
+        user.VerificationPurpose = string.Empty;
 
         user.RefreshToken = _jwtService.GenerateRefreshToken();
-
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
             _jwtSettings.RefreshTokenDays);
 
@@ -157,9 +208,7 @@ public class AuthService : IAuthService
             user,
             cancellationToken);
 
-        return CreateResponse(
-            user,
-            string.Empty);
+        return CreateResponse(user);
     }
 
     public async Task<AuthResponseDto> GoogleLoginAsync(
@@ -167,7 +216,7 @@ public class AuthService : IAuthService
         string name,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(
+        User? user = await _userRepository.GetByEmailAsync(
             email,
             cancellationToken);
 
@@ -180,11 +229,13 @@ public class AuthService : IAuthService
                 Email = email,
                 PasswordHash = string.Empty,
                 VerificationCode = string.Empty,
-                IsVerified = true
+                VerificationCodeExpiresAt = null,
+                VerificationPurpose = string.Empty,
+                IsVerified = true,
+                Role = 0
             };
 
             user.RefreshToken = _jwtService.GenerateRefreshToken();
-
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
                 _jwtSettings.RefreshTokenDays);
 
@@ -202,7 +253,6 @@ public class AuthService : IAuthService
             user.IsVerified = true;
 
             user.RefreshToken = _jwtService.GenerateRefreshToken();
-
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(
                 _jwtSettings.RefreshTokenDays);
 
@@ -211,45 +261,121 @@ public class AuthService : IAuthService
                 cancellationToken);
         }
 
-        return CreateResponse(
-            user,
-            string.Empty);
+        return CreateResponse(user);
     }
 
-    public async Task<UserReadDto?> GetProfileAsync(string email)
+    public async Task<VerificationRequiredDto> ForgotPasswordAsync(
+        ForgotPasswordDto dto,
+        CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(
-            email,
-            CancellationToken.None);
+        User? user = await _userRepository.GetByEmailAsync(
+            dto.Email,
+            cancellationToken);
 
         if (user == null)
         {
-            return null;
+            throw new Exception("User with this email was not found");
         }
 
-        return new UserReadDto
+        string code = GenerateCode();
+
+        user.VerificationCode = code;
+        user.VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(10);
+        user.VerificationPurpose = "PasswordReset";
+
+        await _userRepository.UpdateAsync(
+            user,
+            cancellationToken);
+
+        await _emailService.SendVerificationCodeAsync(
+            user.Email,
+            code,
+            cancellationToken);
+
+        return new VerificationRequiredDto
         {
-            Id = user.Id,
             Email = user.Email,
-            Name = user.Name
+            Purpose = "PasswordReset",
+            Message = "Password reset code has been sent to your email."
         };
     }
 
-    private AuthResponseDto CreateResponse(
-        User user,
-        string verificationCode)
+    public async Task ResetPasswordAsync(
+        ResetPasswordDto dto,
+        CancellationToken cancellationToken)
     {
-        var response = _mapper.Map<AuthResponseDto>(user);
+        if (string.IsNullOrWhiteSpace(dto.NewPassword))
+        {
+            throw new Exception("New password is required");
+        }
 
-        response.AccessToken =
-            _jwtService.GenerateAccessToken(user);
+        if (dto.NewPassword.Length < 6)
+        {
+            throw new Exception(
+                "Password must contain at least 6 characters");
+        }
 
-        response.AccessTokenExpires =
-            DateTime.UtcNow.AddMinutes(
-                _jwtSettings.AccessTokenMinutes);
+        User? user = await _userRepository.GetByEmailAsync(
+            dto.Email,
+            cancellationToken);
 
-        response.VerificationCode = verificationCode;
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        if (!string.Equals(
+                user.VerificationCode,
+                dto.Code,
+                StringComparison.Ordinal))
+        {
+            throw new Exception("Invalid verification code");
+        }
+
+        if (user.VerificationCodeExpiresAt == null ||
+            user.VerificationCodeExpiresAt < DateTime.UtcNow)
+        {
+            throw new Exception("Verification code has expired");
+        }
+
+        if (!string.Equals(
+                user.VerificationPurpose,
+                "PasswordReset",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new Exception("Invalid verification purpose");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+            dto.NewPassword);
+
+        user.VerificationCode = string.Empty;
+        user.VerificationCodeExpiresAt = null;
+        user.VerificationPurpose = string.Empty;
+
+        await _userRepository.UpdateAsync(
+            user,
+            cancellationToken);
+    }
+
+    private AuthResponseDto CreateResponse(User user)
+    {
+        AuthResponseDto response = _mapper.Map<AuthResponseDto>(user);
+
+        response.AccessToken = _jwtService.GenerateAccessToken(user);
+
+        response.AccessTokenExpires = DateTime.UtcNow.AddMinutes(
+            _jwtSettings.AccessTokenMinutes);
+
+        response.RefreshToken = user.RefreshToken;
+
+        response.Role = user.Role;
 
         return response;
+    }
+
+    private static string GenerateCode()
+    {
+        return Random.Shared.Next(100000, 1000000).ToString();
     }
 }

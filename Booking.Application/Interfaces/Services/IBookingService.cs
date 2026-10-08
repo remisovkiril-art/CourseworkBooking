@@ -4,12 +4,12 @@ namespace Booking.Application.Interfaces.Services;
 
 public interface IBookingService
 {
-    Task<object> CreateAsync(
+    Task<BookingDto> CreateAsync(
         Guid userId,
         CreateBookingDto dto,
         CancellationToken cancellationToken);
 
-    Task<List<object>> GetMyBookingsAsync(
+    Task<List<BookingDto>> GetMyBookingsAsync(
         Guid userId,
         CancellationToken cancellationToken);
 }

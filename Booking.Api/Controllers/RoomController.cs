@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs.Hotels;
+﻿using Booking.Application.DTOs.Rooms;
 using Booking.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +11,8 @@ public class RoomController : ControllerBase
 {
     private readonly IRoomService _roomService;
 
-    public RoomController(IRoomService roomService)
+    public RoomController(
+        IRoomService roomService)
     {
         _roomService = roomService;
     }
@@ -21,9 +22,10 @@ public class RoomController : ControllerBase
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var result = await _roomService.GetByHotelIdAsync(
-            hotelId,
-            cancellationToken);
+        List<RoomDto> result =
+            await _roomService.GetByHotelIdAsync(
+                hotelId,
+                cancellationToken);
 
         return Ok(result);
     }
@@ -33,17 +35,20 @@ public class RoomController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var result = await _roomService.GetByIdAsync(
-            id,
-            cancellationToken);
+        RoomDto? result =
+            await _roomService.GetByIdAsync(
+                id,
+                cancellationToken);
 
         if (result == null)
+        {
             return NotFound();
+        }
 
         return Ok(result);
     }
 
-    [Authorize]
+    [Authorize(Roles = "1")]
     [HttpPost("hotel/{hotelId:guid}")]
     public async Task<IActionResult> Create(
         Guid hotelId,
@@ -52,16 +57,20 @@ public class RoomController : ControllerBase
     {
         try
         {
-            var result = await _roomService.CreateAsync(
-                hotelId,
-                dto,
-                cancellationToken);
+            RoomDto result =
+                await _roomService.CreateAsync(
+                    hotelId,
+                    dto,
+                    cancellationToken);
 
             return Ok(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
 }

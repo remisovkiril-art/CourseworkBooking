@@ -17,7 +17,7 @@ namespace Booking.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "8.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -86,6 +86,10 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Attractions")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -98,11 +102,50 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("HotelChainId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HotelType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsCityCentre")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPopular")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPopularPlace")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("NearAirport")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("NearMetro")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("NearStation")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Stars")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("HotelChainId");
 
                     b.ToTable("Hotels");
                 });
@@ -127,6 +170,23 @@ namespace Booking.Infrastructure.Migrations
                     b.ToTable("HotelAmenities");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.HotelChain", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("HotelChain");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.HotelImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -145,6 +205,39 @@ namespace Booking.Infrastructure.Migrations
                     b.HasIndex("HotelId");
 
                     b.ToTable("HotelImages");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.NewsletterSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AcrossTheWorld")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AffordableTravel")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("FavoriteCities")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SeasonalOffers")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("NewsletterSubscriptions");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.PaymentMethod", b =>
@@ -280,8 +373,14 @@ namespace Booking.Infrastructure.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Gender")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsVerified")
@@ -297,12 +396,18 @@ namespace Booking.Infrastructure.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PreferredCurrency")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("RefreshToken")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("RefreshTokenExpiryTime")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
 
                     b.Property<string>("TravelPurpose")
                         .HasColumnType("nvarchar(max)");
@@ -314,9 +419,40 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("VerificationCodeExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VerificationPurpose")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.UserTravelPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PreferenceName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserTravelPreferences");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.BookingEntity", b =>
@@ -336,6 +472,15 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Room");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.Hotel", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.HotelChain", "HotelChain")
+                        .WithMany("Hotels")
+                        .HasForeignKey("HotelChainId");
+
+                    b.Navigation("HotelChain");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.HotelAmenity", b =>
@@ -358,6 +503,17 @@ namespace Booking.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.NewsletterSubscription", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.User", "User")
+                        .WithOne("NewsletterSubscription")
+                        .HasForeignKey("Booking.Domain.Entities.NewsletterSubscription", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.PaymentMethod", b =>
@@ -401,6 +557,17 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Hotel");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.UserTravelPreference", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.User", "User")
+                        .WithMany("TravelPreferences")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.Hotel", b =>
                 {
                     b.Navigation("Amenities");
@@ -412,6 +579,11 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Rooms");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.HotelChain", b =>
+                {
+                    b.Navigation("Hotels");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.Room", b =>
                 {
                     b.Navigation("Bookings");
@@ -421,9 +593,13 @@ namespace Booking.Infrastructure.Migrations
                 {
                     b.Navigation("Bookings");
 
+                    b.Navigation("NewsletterSubscription");
+
                     b.Navigation("PaymentMethods");
 
                     b.Navigation("Reviews");
+
+                    b.Navigation("TravelPreferences");
                 });
 #pragma warning restore 612, 618
         }

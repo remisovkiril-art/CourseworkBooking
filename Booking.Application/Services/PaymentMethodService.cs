@@ -9,18 +9,31 @@ public class PaymentMethodService : IPaymentMethodService
 {
     private readonly IPaymentMethodRepository _repository;
 
-    public PaymentMethodService(IPaymentMethodRepository repository)
+    public PaymentMethodService(
+        IPaymentMethodRepository repository)
     {
         _repository = repository;
     }
 
-    public async Task<List<PaymentMethod>> GetAsync(
+    public async Task<List<PaymentMethodDto>> GetAsync(
         Guid userId,
         CancellationToken cancellationToken)
     {
-        return await _repository.GetByUserIdAsync(
-            userId,
-            cancellationToken);
+        List<PaymentMethod> paymentMethods =
+            await _repository.GetByUserIdAsync(
+                userId,
+                cancellationToken);
+
+        return paymentMethods
+            .Select(x => new PaymentMethodDto
+            {
+                Id = x.Id,
+                CardType = x.CardType,
+                CardNumberHidden = x.CardNumberHidden,
+                Last4 = x.Last4,
+                ExpirationDate = x.ExpirationDate
+            })
+            .ToList();
     }
 
     public async Task AddAsync(
@@ -28,19 +41,24 @@ public class PaymentMethodService : IPaymentMethodService
         AddPaymentMethodDto dto,
         CancellationToken cancellationToken)
     {
-        var cardNumber = dto.CardNumber.Replace(" ", "");
+        string cardNumber =
+            dto.CardNumber.Replace(" ", "");
 
-        if (cardNumber.Length != 16 || !cardNumber.All(char.IsDigit))
+        if (cardNumber.Length != 16 ||
+            !cardNumber.All(char.IsDigit))
+        {
             throw new Exception("Invalid card number");
+        }
 
-        var last4 = cardNumber[^4..];
+        string last4 = cardNumber[^4..];
 
-        var paymentMethod = new PaymentMethod
+        PaymentMethod paymentMethod = new PaymentMethod
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             CardType = dto.CardType,
-            CardNumberHidden = $"**** **** **** {last4}",
+            CardNumberHidden =
+                $"**** **** **** {last4}",
             Last4 = last4,
             ExpirationDate = dto.ExpirationDate
         };
