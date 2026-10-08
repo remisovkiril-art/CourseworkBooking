@@ -19,6 +19,7 @@ public class HotelRepository : IHotelRepository
     {
         return await _context.Hotels
             .AsSplitQuery()
+            .Include(h => h.HotelChain)
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
@@ -77,5 +78,19 @@ public class HotelRepository : IHotelRepository
 
         await _context.SaveChangesAsync(
             cancellationToken);
+    }
+
+    public async Task<List<Hotel>?> GetRandomHotelsAsync(int number, CancellationToken cancellationToken)
+    {
+        return await _context.Hotels
+               .OrderBy(x => Guid.NewGuid())
+            .Take(number)
+            .Include(x => x.Rooms)
+                .ThenInclude(x => x.Bookings)
+            .Include(x => x.Amenities)
+            .Include(x => x.Images)
+            .Include(x => x.Reviews)
+                .ThenInclude(x => x.User)
+            .ToListAsync(cancellationToken);
     }
 }

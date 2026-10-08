@@ -1,3 +1,4 @@
+﻿using Booking.Application.DTOs.Rooms;
 ﻿using AutoMapper;
 using Booking.Application.DTOs.Hotels;
 using Booking.Application.Interfaces.Repository;

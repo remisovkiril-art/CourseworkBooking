@@ -26,26 +26,44 @@ public class HotelController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetHotels(
-        string? search,
-        int adults = 0,
-        int children = 0,
-        int rooms = 0,
-        DateTime? checkIn = null,
-        DateTime? checkOut = null,
-        CancellationToken cancellationToken = default)
+    public async Task<ActionResult<HotelSearchResultDto>> GetAll(
+        [FromQuery] HotelSearchDto request,
+        CancellationToken cancellationToken)
     {
         var result = await _hotelService.GetAllAsync(
-            search,
-            adults,
-            children,
-            rooms,
-            checkIn,
-            checkOut,
+            request,
             cancellationToken);
 
         return Ok(result);
     }
+
+    [HttpGet("random")]
+    public async Task<ActionResult<List<HotelDto>>> GetRandomHotels(
+        [FromQuery] int number = 8,
+        CancellationToken cancellationToken = default)
+    {
+        if (number <= 0)
+            return BadRequest("Number must be greater than 0.");
+
+        var hotels = await _hotelService.GetRandomAsync(
+            number,
+            cancellationToken);
+
+        return Ok(hotels);
+    }
+
+    [HttpGet("filters")]
+    public async Task<ActionResult<HotelFiltersDto>> GetFilters(
+       [FromQuery] HotelSearchDto request,
+       CancellationToken cancellationToken)
+    {
+        var result = await _hotelService.GetFiltersAsync(
+            request,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetHotel(

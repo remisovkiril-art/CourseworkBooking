@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
 using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
+using Booking.Application.DTOs.Rooms;
+using Booking.Application.DTOs.Stars;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
+using Booking.Domain.Enum;
 
 namespace Booking.Application.Services;
 
@@ -23,77 +26,231 @@ public class HotelService : IHotelService
         _cacheService = cacheService;
     }
 
-    public async Task<List<HotelDto>> GetAllAsync(
-        string? search,
-        int adults,
-        int children,
-        int rooms,
-        DateTime? checkIn,
-        DateTime? checkOut,
+    public async Task<HotelSearchResultDto> GetAllAsync(
+     HotelSearchDto request,
+     CancellationToken cancellationToken)
+    {
+        var hotels = await _hotelRepository.GetAllAsync(cancellationToken);
+
+        var result = ApplyFilters(hotels, request);
+
+        result = request.Sort?.ToLower() switch
+        {
+            "rating" =>
+                result.OrderByDescending(h =>
+                    h.Reviews.Any()
+                        ? h.Reviews.Average(r => r.Rating)
+                        : 0),
+
+            "price-asc" =>
+                result.OrderBy(h =>
+                    h.Rooms.Any()
+                        ? h.Rooms.Min(r => r.PricePerNight)
+                        : decimal.MaxValue),
+
+            "price-desc" =>
+                result.OrderByDescending(h =>
+                    h.Rooms.Any()
+                        ? h.Rooms.Min(r => r.PricePerNight)
+                        : 0),
+
+            _ => result
+        };
+
+        var total = result.Count();
+
+        var page = Math.Max(request.Page, 1);
+
+        var pageSize = request.PageSize <= 0
+            ? 7
+            : request.PageSize;
+
+        var hotelsResult = result
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(Map)
+            .ToList();
+
+        return new HotelSearchResultDto
+        {
+            Hotels = hotelsResult,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+
+
+    public async Task<HotelFiltersDto> GetFiltersAsync(
+        HotelSearchDto request,
         CancellationToken cancellationToken)
     {
         var hotels = await _hotelRepository.GetAllAsync(
             cancellationToken);
 
-        var result = hotels.AsEnumerable();
+        var allHotels = hotels;
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            result = result.Where(x =>
-                x.Name.Contains(
-                    search,
-                    StringComparison.OrdinalIgnoreCase) ||
-                x.City.Contains(
-                    search,
-                    StringComparison.OrdinalIgnoreCase) ||
-                x.Country.Contains(
-                    search,
-                    StringComparison.OrdinalIgnoreCase));
-        }
+        var prices = allHotels
+            .SelectMany(h => h.Rooms)
+            .Select(r => r.PricePerNight)
+            .ToList();
 
-        var people = adults + children;
+        var minPrice = prices.Any()
+            ? prices.Min()
+            : 0;
 
-        if (checkIn.HasValue &&
-            checkOut.HasValue &&
-            checkOut.Value > checkIn.Value)
-        {
-            result = result.Where(h => h.Rooms.Any(r =>
-                r.IsAvailable &&
-                (people == 0 || r.Capacity >= people) &&
-                !r.Bookings.Any(b =>
-                    b.Status != "Cancelled" &&
-                    b.CheckInDate < checkOut.Value &&
-                    b.CheckOutDate > checkIn.Value)));
-        }
-        else if (people > 0)
-        {
-            result = result.Where(h => h.Rooms.Any(r =>
-                r.IsAvailable &&
-                r.Capacity >= people));
-        }
+        var maxPrice = prices.Any()
+            ? prices.Max()
+            : 0;
 
-        if (rooms > 0)
+
+        var result = ApplyFilters(
+            allHotels,
+            request);
+
+        var hotelsList = result.ToList();
+
+
+        // Rating counts:
+        // враховуємо всі фільтри, крім MinRating
+        var ratingHotels = ApplyFilters(
+            hotels,
+            request,
+            applyRating: false
+        ).ToList();
+
+        // Stars counts:
+        // враховуємо всі фільтри, крім Stars
+        var starsHotels = ApplyFilters(
+            hotels,
+            request,
+            applyStars: false
+        ).ToList();
+
+        // Types counts:
+        // враховуємо всі фільтри, крім Types
+        var typeHotels = ApplyFilters(
+            hotels,
+            request,
+            applyTypes: false
+        ).ToList();
+
+        // Chains counts:
+        // враховуємо всі фільтри, крім ChainIds
+        var chainHotels = ApplyFilters(
+            hotels,
+            request,
+            applyChains: false
+        ).ToList();
+
+        // Amenities counts:
+        // враховуємо всі фільтри, крім Amenities
+        var amenityHotels = ApplyFilters(
+            hotels,
+            request,
+            applyAmenities: false
+        ).ToList();
+
+
+
+        var ratings = new List<RatingFilterDto>
         {
-            if (checkIn.HasValue &&
-                checkOut.HasValue &&
-                checkOut.Value > checkIn.Value)
+            new()
             {
-                result = result.Where(h =>
-                    h.Rooms.Count(r =>
-                        r.IsAvailable &&
-                        !r.Bookings.Any(b =>
-                            b.Status != "Cancelled" &&
-                            b.CheckInDate < checkOut.Value &&
-                            b.CheckOutDate > checkIn.Value)) >= rooms);
-            }
-            else
-            {
-                result = result.Where(h =>
-                    h.Rooms.Count(r => r.IsAvailable) >= rooms);
-            }
-        }
+                MinRating = 9,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 9)
+            },
 
-        return result.Select(Map).ToList();
+            new()
+            {
+                MinRating = 8,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 8)
+            },
+
+            new()
+            {
+                MinRating = 7,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 7)
+            },
+
+            new()
+            {
+                MinRating = 6,
+                Count = ratingHotels.Count(h =>
+                    h.Reviews.Any() &&
+                    h.Reviews.Average(r => r.Rating) >= 6)
+            }
+        };
+
+
+        var stars = starsHotels
+            .GroupBy(h => h.Stars)
+            .OrderByDescending(g => g.Key)
+            .Select(g => new StarsFilterDto
+            {
+                Stars = g.Key,
+                Count = g.Count()
+            })
+            .ToList();
+
+
+        var types = typeHotels
+            .GroupBy(h => h.Type)
+            .Select(g => new HotelTypeFilterDto
+            {
+                Type = g.Key.ToString(),
+                Count = g.Count()
+            })
+            .ToList();
+
+
+        var chains = chainHotels
+            .Where(h => h.HotelChain != null)
+            .GroupBy(h => new
+            {
+                h.HotelChainId,
+                h.HotelChain!.Name
+            })
+            .Select(g => new ChainFilterDto
+            {
+                Id = g.Key.HotelChainId!.Value,
+                Name = g.Key.Name,
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+
+        var amenities = amenityHotels
+            .SelectMany(h => h.Amenities)
+            .GroupBy(a => a.AmenityName)
+            .Select(g => new AmenityFilterDto
+            {
+                Name = g.Key,
+                Count = g.Select(a => a.HotelId)
+                    .Distinct()
+                    .Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+        return new HotelFiltersDto
+        {
+            Ratings = ratings,
+            Stars = stars,
+            Types = types,
+            Chains = chains,
+            Amenities = amenities,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice
+        };
     }
 
     public async Task<HotelDto?> GetByIdAsync(
@@ -140,13 +297,20 @@ public class HotelService : IHotelService
 
         if (dto.Rooms.Count < 1 || dto.Rooms.Count > 4)
         {
-            throw new Exception(
-                "A hotel must have from 1 to 4 rooms");
+            throw new Exception("A hotel must have from 1 to 4 rooms");
         }
 
-        var hotel = _mapper.Map<Hotel>(dto);
-
-        hotel.Id = Guid.NewGuid();
+        var hotel = new Hotel
+        {
+            Id = Guid.NewGuid(),
+            Address = dto.Address,
+            Name = dto.Name,
+            City = dto.City,
+            Country = dto.Country,
+            Description = dto.Description,
+            Stars = dto.Stars,
+            Type = dto.Type
+        };
 
         foreach (var amenity in dto.Amenities)
         {
@@ -192,117 +356,236 @@ public class HotelService : IHotelService
         return Map(hotel);
     }
 
-    private static HotelDto Map(Hotel hotel)
+
+    private IEnumerable<Hotel> ApplyBaseFilters(
+        IEnumerable<Hotel> hotels,
+        HotelSearchDto request)
     {
-        var reviews = hotel.Reviews
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new ReviewDto
-            {
-                Id = x.Id,
-                HotelId = x.HotelId,
-                AuthorName = x.User.Name ?? "User",
-                AuthorAvatarUrl = x.User.AvatarUrl,
-                Text = x.Comment,
-                Rating = x.Rating,
-                CreatedAt = x.CreatedAt,
-                Facilities = x.Facilities,
-                Staff = x.Staff,
-                Cleanliness = x.Cleanliness,
-                Comfort = x.Comfort,
-                Location = x.Location,
-                ValueForMoney = x.ValueForMoney
-            })
-            .ToList();
+        var result = hotels;
 
-        var hasReviews = hotel.Reviews.Count > 0;
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            result = result.Where(h =>
+                h.Name.Contains(request.Search, StringComparison.OrdinalIgnoreCase) ||
+                h.City.Contains(request.Search, StringComparison.OrdinalIgnoreCase) ||
+                h.Country.Contains(request.Search, StringComparison.OrdinalIgnoreCase));
+        }
 
-        var rating = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Rating),
-                1)
-            : 0;
+        var people = request.Adults + request.Children;
 
-        var facilities = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Facilities),
-                1)
-            : 0;
+        if (request.CheckIn.HasValue &&
+            request.CheckOut.HasValue &&
+            request.CheckOut > request.CheckIn)
+        {
+            result = result.Where(h =>
+                h.Rooms.Any(r =>
+                    r.IsAvailable &&
+                    (people == 0 || r.Capacity >= people) &&
+                    !r.Bookings.Any(b =>
+                        b.Status != "Cancelled" &&
+                        b.CheckInDate < request.CheckOut &&
+                        b.CheckOutDate > request.CheckIn)));
+        }
+        else if (people > 0)
+        {
+            result = result.Where(h =>
+                h.Rooms.Any(r =>
+                    r.IsAvailable &&
+                    r.Capacity >= people));
+        }
 
-        var staff = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Staff),
-                1)
-            : 0;
+        if (request.Rooms > 0)
+        {
+            result = result.Where(h =>
+                h.Rooms.Count(r =>
+                    r.IsAvailable &&
+                    (
+                        !request.CheckIn.HasValue ||
+                        !request.CheckOut.HasValue ||
+                        !r.Bookings.Any(b =>
+                            b.Status != "Cancelled" &&
+                            b.CheckInDate < request.CheckOut &&
+                            b.CheckOutDate > request.CheckIn)
+                    )
+                ) >= request.Rooms);
+        }
 
-        var cleanliness = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Cleanliness),
-                1)
-            : 0;
+        return result;
+    }
 
-        var comfort = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Comfort),
-                1)
-            : 0;
-
-        var location = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.Location),
-                1)
-            : 0;
-
-        var valueForMoney = hasReviews
-            ? Math.Round(
-                hotel.Reviews.Average(x => x.ValueForMoney),
-                1)
-            : 0;
-
-        var images = hotel.Images
-            .Select(x => x.ImageUrl)
-            .ToList();
-
-        var hasWifi = hotel.Amenities.Any(x =>
-            x.AmenityName.Equals(
-                "Wi-Fi",
-                StringComparison.OrdinalIgnoreCase))
-            ? true
-            : (bool?)null;
+    private HotelDto Map(Hotel hotel)
+    {
+        var hasReviews = hotel.Reviews.Any();
 
         return new HotelDto
         {
             Id = hotel.Id,
+
             Name = hotel.Name,
+
             Address = hotel.Address,
+
             City = hotel.City,
+
             Country = hotel.Country,
+
             Description = hotel.Description,
-            Rating = rating,
-            Facilities = facilities,
-            Staff = staff,
-            Cleanliness = cleanliness,
-            Comfort = comfort,
-            Location = location,
-            ValueForMoney = valueForMoney,
-            ReviewsCount = reviews.Count,
-            MainImageUrl = images.FirstOrDefault() ?? string.Empty,
-            Images = images,
-            Amenities = hotel.Amenities
-                .Select(x => x.AmenityName)
+
+            Type = hotel.Type,
+
+            Stars = hotel.Stars,
+
+            Rating = hasReviews
+                ? hotel.Reviews.Average(r => r.Rating)
+                : 0,
+
+            ReviewsCount = hotel.Reviews.Count,
+
+            Facilities = hasReviews
+                ? hotel.Reviews.Average(r => r.Facilities)
+                : 0,
+
+            Staff = hasReviews
+                ? hotel.Reviews.Average(r => r.Staff)
+                : 0,
+
+            Cleanliness = hasReviews
+                ? hotel.Reviews.Average(r => r.Cleanliness)
+                : 0,
+
+            Comfort = hasReviews
+                ? hotel.Reviews.Average(r => r.Comfort)
+                : 0,
+
+            Location = hasReviews
+                ? hotel.Reviews.Average(r => r.Location)
+                : 0,
+
+            ValueForMoney = hasReviews
+                ? hotel.Reviews.Average(r => r.ValueForMoney)
+                : 0,
+
+            MainImageUrl = hotel.Images
+                .FirstOrDefault()?.ImageUrl ?? string.Empty,
+
+            Images = hotel.Images
+                .Select(i => i.ImageUrl)
                 .ToList(),
-            HasWifi = hasWifi,
-            Rooms = hotel.Rooms.Select(x => new RoomDto
-            {
-                Id = x.Id,
-                HotelId = x.HotelId,
-                Title = x.Title,
-                BedType = x.BedType,
-                Capacity = x.Capacity,
-                PricePerNight = x.PricePerNight,
-                IsAvailable = x.IsAvailable,
-                ImageUrl = x.ImageUrl
-            }).ToList(),
-            Reviews = reviews
+
+            Amenities = hotel.Amenities
+                .Select(a => a.AmenityName)
+                .ToList(),
+
+            HasWifi = hotel.Amenities.Any(a =>
+                a.AmenityName.Equals(
+                    "Wi-Fi",
+                    StringComparison.OrdinalIgnoreCase)),
+
+            Rooms = _mapper.Map<List<RoomDto>>(hotel.Rooms),
+
+            Reviews = _mapper.Map<List<ReviewDto>>(hotel.Reviews)
         };
     }
+
+    private IEnumerable<Hotel> ApplyFilters(
+            IEnumerable<Hotel> hotels,
+            HotelSearchDto request,
+            bool applyRating = true,
+            bool applyStars = true,
+            bool applyTypes = true,
+            bool applyChains = true,
+            bool applyAmenities = true)
+    {
+        var result = ApplyBaseFilters(hotels, request);
+
+        if (applyRating && request.MinRating.HasValue)
+        {
+            result = result.Where(h =>
+                h.Reviews.Any() &&
+                h.Reviews.Average(r => r.Rating)
+                    >= request.MinRating.Value);
+        }
+
+        if (applyStars && request.Stars.HasValue)
+        {
+            result = result.Where(h => h.Stars == request.Stars.Value);
+        }
+
+        if (applyTypes &&
+            request.Types != null &&
+            request.Types.Length > 0)
+        {
+            result = result.Where(h =>
+                request.Types.Contains(h.Type));
+        }
+
+        if (applyChains &&
+            request.ChainIds != null &&
+            request.ChainIds.Length > 0)
+        {
+            result = result.Where(h =>
+                h.HotelChainId.HasValue &&
+                request.ChainIds.Contains(h.HotelChainId.Value));
+        }
+
+        if (applyAmenities &&
+            request.Amenities != null &&
+            request.Amenities.Length > 0)
+        {
+            foreach (var amenity in request.Amenities)
+            {
+                result = result.Where(h =>
+                    h.Amenities.Any(a =>
+                        a.AmenityName.Equals(
+                            amenity,
+                            StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+
+        if (request.MinPrice.HasValue ||
+        request.MaxPrice.HasValue)
+        {
+            result = result.Where(h =>
+                h.Rooms.Any(r =>
+                    (!request.MinPrice.HasValue ||
+                     r.PricePerNight >= request.MinPrice.Value)
+                    &&
+                    (!request.MaxPrice.HasValue ||
+                     r.PricePerNight <= request.MaxPrice.Value)
+                ));
+        }
+
+        return result;
+    }
+
+
+    public async Task<List<HotelDto>?> GetRandomAsync(int number, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"hotels:random:{number}";
+
+        var cached = await _cacheService.GetAsync<List<HotelDto>>(
+            cacheKey);
+
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        var hotels = await _hotelRepository.GetRandomHotelsAsync(
+            number,
+            cancellationToken);
+
+        var result = hotels
+        .Select(Map)
+        .ToList();
+
+        await _cacheService.SetAsync(
+            cacheKey,
+            result,
+            null);
+
+        return result;
+    }
 }
+

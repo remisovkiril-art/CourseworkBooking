@@ -30,6 +30,18 @@ public class ReviewController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("best")]
+    public async Task<ActionResult<List<ReviewDto>>> GetBestReviews(
+        CancellationToken cancellationToken,
+        [FromQuery] int count = 3)
+    {
+        var result = await _reviewService.GetBestReviewsAsync(
+            count,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create(
