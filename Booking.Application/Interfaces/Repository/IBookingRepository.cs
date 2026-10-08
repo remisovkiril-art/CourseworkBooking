@@ -8,6 +8,10 @@ public interface IBookingRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    Task<BookingEntity?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken);
+
     Task AddAsync(
         BookingEntity booking,
         CancellationToken cancellationToken);

@@ -8,8 +8,9 @@ public interface IHotelRepository
     Task<List<Hotel>> GetAllAsync(
         CancellationToken cancellationToken);
 
-    Task<List<Hotel>?> GetRandomHotelsAsync(int number, CancellationToken cancellationToken);
-
+    Task<List<Hotel>> SearchAsync(
+        HotelSearchDto dto,
+        CancellationToken cancellationToken);
 
     Task<Hotel?> GetByIdAsync(
         Guid id,
@@ -25,5 +26,13 @@ public interface IHotelRepository
 
     Task AddImageAsync(
         HotelImage image,
+        CancellationToken cancellationToken);
+
+    Task<List<Hotel>?> GetRandomHotelsAsync(
+        int number,
+        CancellationToken cancellationToken);
+
+    Task DeleteAsync(
+        Guid id,
         CancellationToken cancellationToken);
 }

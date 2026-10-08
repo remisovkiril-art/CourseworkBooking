@@ -1,10 +1,8 @@
 ﻿using AutoMapper;
-using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
 using Booking.Domain.Entities;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Booking.Application.Services;
 
@@ -31,23 +29,24 @@ public class ReviewService : IReviewService
         Guid hotelId,
         CancellationToken cancellationToken)
     {
-        var cacheKey = $"reviews:hotel:{hotelId}";
+        string cacheKey = $"reviews:hotel:{hotelId}";
 
-        var cache = await _cachingService
-            .GetAsync<List<ReviewDto>>(cacheKey);
+        List<ReviewDto>? cache =
+            await _cachingService.GetAsync<List<ReviewDto>>(cacheKey);
 
         if (cache == null)
         {
-            var reviews = await _reviewRepository.GetByHotelIdAsync(
-                hotelId,
-                cancellationToken);
+            List<Review> reviews =
+                await _reviewRepository.GetByHotelIdAsync(
+                    hotelId,
+                    cancellationToken);
 
             cache = _mapper.Map<List<ReviewDto>>(reviews);
 
             await _cachingService.SetAsync(
                 cacheKey,
                 cache,
-                null);
+                TimeSpan.FromMinutes(15));
         }
 
         return cache;
@@ -63,52 +62,56 @@ public class ReviewService : IReviewService
             throw new Exception("Review text is required");
         }
 
-        if (dto.Facilities < 1 || dto.Facilities > 10 ||
-            dto.Staff < 1 || dto.Staff > 10 ||
-            dto.Cleanliness < 1 || dto.Cleanliness > 10 ||
-            dto.Comfort < 1 || dto.Comfort > 10 ||
-            dto.Location < 1 || dto.Location > 10 ||
-            dto.ValueForMoney < 1 || dto.ValueForMoney > 10)
+        if (dto.Facilities < 1 ||
+            dto.Facilities > 10 ||
+            dto.Staff < 1 ||
+            dto.Staff > 10 ||
+            dto.Cleanliness < 1 ||
+            dto.Cleanliness > 10 ||
+            dto.Comfort < 1 ||
+            dto.Comfort > 10 ||
+            dto.Location < 1 ||
+            dto.Location > 10 ||
+            dto.ValueForMoney < 1 ||
+            dto.ValueForMoney > 10)
         {
-            throw new Exception(
-                "All ratings must be from 1 to 10");
+            throw new Exception("All ratings must be from 1 to 10");
         }
 
-        var hotel = await _hotelRepository.GetByIdAsync(
-            dto.HotelId,
-            cancellationToken);
+        Hotel? hotel =
+            await _hotelRepository.GetByIdAsync(
+                dto.HotelId,
+                cancellationToken);
 
         if (hotel == null)
         {
             throw new Exception("Hotel not found");
         }
 
-        var rating = (
-            dto.Facilities +
-            dto.Staff +
-            dto.Cleanliness +
-            dto.Comfort +
-            dto.Location +
-            dto.ValueForMoney
-        ) / 6;
+        double rating =
+            (
+                dto.Facilities +
+                dto.Staff +
+                dto.Cleanliness +
+                dto.Comfort +
+                dto.Location +
+                dto.ValueForMoney
+            ) / 6.0;
 
-        var review = new Review
+        rating = Math.Round(rating / 2.0, 1);
+
+        Review review = new Review
         {
             Id = Guid.NewGuid(),
             HotelId = dto.HotelId,
             UserId = userId,
-
-            Rating = Math.Round(
-                rating,
-                1),
-
+            Rating = rating,
             Facilities = dto.Facilities,
             Staff = dto.Staff,
             Cleanliness = dto.Cleanliness,
             Comfort = dto.Comfort,
             Location = dto.Location,
             ValueForMoney = dto.ValueForMoney,
-
             Comment = dto.Text,
             CreatedAt = DateTime.UtcNow
         };
@@ -119,6 +122,9 @@ public class ReviewService : IReviewService
 
         await _cachingService.RemoveAsync(
             $"reviews:hotel:{dto.HotelId}");
+
+        await _cachingService.RemoveAsync(
+            $"hotel:{dto.HotelId}");
 
         return new ReviewDto
         {
@@ -137,23 +143,27 @@ public class ReviewService : IReviewService
         };
     }
 
-    public async Task<List<ReviewDto>?> GetBestReviewsAsync(int count, CancellationToken cancellationToken)
+    public async Task<List<ReviewDto>?> GetBestReviewsAsync(
+        int count,
+        CancellationToken cancellationToken)
     {
-        var cacheKey = $"reviews:best:{count}";
+        string cacheKey = $"reviews:best:{count}";
 
-        var cached = await _cachingService.GetAsync<List<ReviewDto>>(
-            cacheKey);
+        List<ReviewDto>? cached =
+            await _cachingService.GetAsync<List<ReviewDto>>(cacheKey);
 
         if (cached != null)
         {
             return cached;
         }
 
-        var reviews = await _reviewRepository.GetBestReviewsAsync(
-            count,
-            cancellationToken);
+        List<Review>? reviews =
+            await _reviewRepository.GetBestReviewsAsync(
+                count,
+                cancellationToken);
 
-        var result = _mapper.Map<List<ReviewDto>>(reviews);
+        List<ReviewDto> result =
+            _mapper.Map<List<ReviewDto>>(reviews);
 
         await _cachingService.SetAsync(
             cacheKey,
@@ -161,5 +171,39 @@ public class ReviewService : IReviewService
             null);
 
         return result;
+    }
+
+    public async Task DeleteAsync(
+        Guid reviewId,
+        CancellationToken cancellationToken)
+    {
+        Review? review =
+            await FindReviewAsync(
+                reviewId,
+                cancellationToken);
+
+        if (review == null)
+        {
+            throw new Exception("Review not found");
+        }
+
+        await _reviewRepository.DeleteAsync(
+            reviewId,
+            cancellationToken);
+
+        await _cachingService.RemoveAsync(
+            $"reviews:hotel:{review.HotelId}");
+
+        await _cachingService.RemoveAsync(
+            $"hotel:{review.HotelId}");
+    }
+
+    private async Task<Review?> FindReviewAsync(
+        Guid reviewId,
+        CancellationToken cancellationToken)
+    {
+        return await _reviewRepository.GetByIdAsync(
+            reviewId,
+            cancellationToken);
     }
 }

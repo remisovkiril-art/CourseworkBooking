@@ -4,11 +4,11 @@ namespace Booking.Application.Interfaces.Services;
 
 public interface IAuthService
 {
-    Task<AuthResponseDto> RegisterAsync(
+    Task<VerificationRequiredDto> RegisterAsync(
         RegisterDto dto,
         CancellationToken cancellationToken);
 
-    Task<AuthResponseDto> LoginAsync(
+    Task<VerificationRequiredDto> LoginAsync(
         LoginDto dto,
         CancellationToken cancellationToken);
 
@@ -19,5 +19,13 @@ public interface IAuthService
     Task<AuthResponseDto> GoogleLoginAsync(
         string email,
         string name,
+        CancellationToken cancellationToken);
+
+    Task<VerificationRequiredDto> ForgotPasswordAsync(
+        ForgotPasswordDto dto,
+        CancellationToken cancellationToken);
+
+    Task ResetPasswordAsync(
+        ResetPasswordDto dto,
         CancellationToken cancellationToken);
 }

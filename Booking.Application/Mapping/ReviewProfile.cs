@@ -12,23 +12,46 @@ public class ReviewProfile : Profile
             .ForMember(
                 destination => destination.Comment,
                 options => options.MapFrom(source => source.Text)
+            )
+            .ForMember(
+                destination => destination.Id,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.UserId,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.CreatedAt,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.Hotel,
+                options => options.Ignore()
+            )
+            .ForMember(
+                destination => destination.User,
+                options => options.Ignore()
             );
 
         CreateMap<Review, ReviewDto>()
             .ForMember(
-                dest => dest.AuthorName,
-                opt => opt.MapFrom(src =>
-                    src.User != null
-                        ? src.User.Name
-                        : "User"))
+                destination => destination.AuthorName,
+                options => options.MapFrom(source =>
+                    source.User != null
+                        ? source.User.Name
+                        : "User")
+            )
             .ForMember(
-                dest => dest.AuthorAvatarUrl,
-                opt => opt.MapFrom(src =>
-                    src.User != null
-                        ? src.User.AvatarUrl
-                        : null))
+                destination => destination.AuthorAvatarUrl,
+                options => options.MapFrom(source =>
+                    source.User != null
+                        ? source.User.AvatarUrl
+                        : null)
+            )
             .ForMember(
-                dest => dest.Text,
-                opt => opt.MapFrom(src => src.Comment));
+                destination => destination.Text,
+                options => options.MapFrom(source => source.Comment)
+            );
     }
 }

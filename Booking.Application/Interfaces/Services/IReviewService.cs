@@ -16,4 +16,8 @@ public interface IReviewService
     Task<List<ReviewDto>?> GetBestReviewsAsync(
         int count,
         CancellationToken cancellationToken);
+
+    Task DeleteAsync(
+        Guid reviewId,
+        CancellationToken cancellationToken);
 }

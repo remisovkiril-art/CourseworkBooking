@@ -1,10 +1,9 @@
-﻿using Booking.Api.Requests.Account;
+﻿using System.Security.Claims;
+using Booking.Api.Requests.Account;
 using Booking.Application.DTOs.Auth;
 using Booking.Application.Interfaces.Services;
-using Booking.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Booking.Api.Controllers;
 
@@ -31,20 +30,23 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> Get(
         CancellationToken cancellationToken)
     {
-        var result = await _userService.GetAsync(
-            GetUserId(),
-            cancellationToken);
+        UpdateUserDto? result =
+            await _userService.GetAsync(
+                GetUserId(),
+                cancellationToken);
 
         if (result == null)
+        {
             return NotFound();
+        }
 
         return Ok(result);
     }
 
     [HttpPut]
     public async Task<IActionResult> Update(
-      [FromForm] AccountUpdateRequest dto,
-      CancellationToken cancellationToken)
+        [FromForm] AccountUpdateRequest dto,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -52,23 +54,30 @@ public class AccountController : ControllerBase
 
             if (dto.Image != null)
             {
-                await using var stream = dto.Image.OpenReadStream();
+                await using Stream stream =
+                    dto.Image.OpenReadStream();
 
-                avatarUrl = await _imageService.SaveUserAvatarAsync(
-                    stream,
-                    dto.Image.FileName,
-                    cancellationToken);
+                avatarUrl =
+                    await _imageService.SaveUserAvatarAsync(
+                        stream,
+                        dto.Image.FileName,
+                        cancellationToken);
             }
 
-            var updateDto = new UpdateUserDto
-            {
-                Name = dto.Name,
-                Phone = dto.Phone,
-                Country = dto.Country,
-                City = dto.City,
-                TravelPurpose = dto.TravelPurpose,
-                TravelingWithPet = dto.TravelingWithPet
-            };
+            UpdateUserDto updateDto =
+                new UpdateUserDto
+                {
+                    Name = dto.Name,
+                    Email = dto.Email,
+                    Phone = dto.Phone,
+                    Country = dto.Country,
+                    City = dto.City,
+                    PreferredCurrency = dto.PreferredCurrency,
+                    TravelPurpose = dto.TravelPurpose,
+                    TravelingWithPet = dto.TravelingWithPet,
+                    Gender = dto.Gender,
+                    DateOfBirth = dto.DateOfBirth
+                };
 
             await _userService.UpdateAsync(
                 GetUserId(),
@@ -80,47 +89,91 @@ public class AccountController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
-
-    //[HttpPut]
-    //public async Task<IActionResult> Update(
-    //    UpdateUserDto dto,
-    //    CancellationToken cancellationToken)
-    //{
-    //    try
-    //    {
-    //        await _userService.UpdateAsync(
-    //            GetUserId(),
-    //            dto,
-    //            cancellationToken);
-
-    //        return NoContent();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        return BadRequest(new { message = ex.Message });
-    //    }
-    //}
 
     [HttpGet("bookings")]
     public async Task<IActionResult> GetBookings(
         CancellationToken cancellationToken)
     {
-        var result = await _bookingService.GetMyBookingsAsync(
-            GetUserId(),
-            cancellationToken);
+        List<Booking.Application.DTOs.Bookings.BookingDto> result =
+            await _bookingService.GetMyBookingsAsync(
+                GetUserId(),
+                cancellationToken);
 
         return Ok(result);
     }
 
+    [HttpGet("travel-preferences")]
+    public async Task<IActionResult> GetTravelPreferences(
+        CancellationToken cancellationToken)
+    {
+        TravelPreferencesDto result =
+            await _userService.GetTravelPreferencesAsync(
+                GetUserId(),
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPut("travel-preferences")]
+    public async Task<IActionResult> SaveTravelPreferences(
+        TravelPreferencesDto dto,
+        CancellationToken cancellationToken)
+    {
+        await _userService.SaveTravelPreferencesAsync(
+            GetUserId(),
+            dto,
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = "Travel preferences saved."
+        });
+    }
+
+    [HttpGet("newsletter")]
+    public async Task<IActionResult> GetNewsletter(
+        CancellationToken cancellationToken)
+    {
+        NewsletterDto? result =
+            await _userService.GetNewsletterAsync(
+                GetUserId(),
+                cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPut("newsletter")]
+    public async Task<IActionResult> SaveNewsletter(
+        NewsletterDto dto,
+        CancellationToken cancellationToken)
+    {
+        await _userService.SaveNewsletterAsync(
+            GetUserId(),
+            dto,
+            cancellationToken);
+
+        return Ok(new
+        {
+            message = "Newsletter settings saved."
+        });
+    }
+
     private Guid GetUserId()
     {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        string? value =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(value))
+        {
             throw new Exception("User is not authorized");
+        }
 
         return Guid.Parse(value);
     }

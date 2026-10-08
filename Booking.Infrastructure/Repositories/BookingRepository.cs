@@ -19,9 +19,24 @@ public class BookingRepository : IBookingRepository
         CancellationToken cancellationToken)
     {
         return await _context.Bookings
+            .AsNoTracking()
+            .Include(x => x.Room)
+                .ThenInclude(x => x.Hotel)
             .Where(x => x.UserId == userId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<BookingEntity?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Bookings
+            .Include(x => x.Room)
+                .ThenInclude(x => x.Hotel)
+            .FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken);
     }
 
     public async Task AddAsync(
@@ -32,7 +47,8 @@ public class BookingRepository : IBookingRepository
             booking,
             cancellationToken);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(
+            cancellationToken);
     }
 
     public async Task<bool> RoomIsBookedAsync(

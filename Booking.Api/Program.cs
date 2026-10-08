@@ -42,7 +42,8 @@ public class Program
             configuration
                 .GetSection("Jwt")
                 .Get<JwtSettings>()
-            ?? throw new Exception("JWT settings not configured.");
+            ?? throw new Exception(
+                "JWT settings not configured.");
 
         builder.Services.AddSingleton(jwtSettings);
 
@@ -52,9 +53,21 @@ public class Program
             configuration
                 .GetSection("Email")
                 .Get<EmailSettings>()
-            ?? throw new Exception("Email settings not configured.");
+            ?? throw new Exception(
+                "Email settings not configured.");
 
         builder.Services.AddSingleton(emailSettings);
+
+        // ================= ADMIN =================
+
+        var adminSettings =
+            configuration
+                .GetSection("Admin")
+                .Get<AdminSettings>()
+            ?? throw new Exception(
+                "Admin settings not configured.");
+
+        builder.Services.AddSingleton(adminSettings);
 
         // ================= AUTHENTICATION =================
 
@@ -99,6 +112,7 @@ public class Program
                 options =>
                 {
                     options.Cookie.HttpOnly = true;
+
                     options.Cookie.SameSite =
                         SameSiteMode.Lax;
 
@@ -127,14 +141,17 @@ public class Program
 
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("ReactPolicy", policy =>
-            {
-                policy
-                    .WithOrigins("http://localhost:5173")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
+            options.AddPolicy(
+                "ReactPolicy",
+                policy =>
+                {
+                    policy
+                        .WithOrigins(
+                            "http://localhost:5173")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
         });
 
         // ================= CONTROLLERS =================
@@ -150,12 +167,20 @@ public class Program
                 "Bearer",
                 new OpenApiSecurityScheme
                 {
-                    Type = SecuritySchemeType.Http,
+                    Type =
+                        SecuritySchemeType.Http,
+
                     Scheme = "bearer",
+
                     BearerFormat = "JWT",
+
                     Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Description = "Enter JWT token"
+
+                    In =
+                        ParameterLocation.Header,
+
+                    Description =
+                        "Enter JWT token"
                 });
 
             options.AddSecurityRequirement(
@@ -169,9 +194,11 @@ public class Program
                                 {
                                     Type =
                                         ReferenceType.SecurityScheme,
+
                                     Id = "Bearer"
                                 }
                         },
+
                         Array.Empty<string>()
                     }
                 });
@@ -188,41 +215,100 @@ public class Program
 
         // ================= REDIS =================
 
-        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-        {
-            var config =
-                builder.Configuration.GetConnectionString(
-                    "RedisServerConnection");
+        builder.Services.AddSingleton<IConnectionMultiplexer>(
+            sp =>
+            {
+                var config =
+                    builder.Configuration.GetConnectionString(
+                        "RedisServerConnection");
 
-            return ConnectionMultiplexer.Connect(config);
-        });
+                return ConnectionMultiplexer.Connect(
+                    config);
+            });
 
         // ================= REPOSITORIES =================
 
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
-        builder.Services.AddScoped<IHotelRepository, HotelRepository>();
-        builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
-        builder.Services.AddScoped<IBookingRepository, BookingRepository>();
-        builder.Services.AddScoped<IRoomRepository, RoomRepository>();
-        builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+        builder.Services.AddScoped<
+            IUserRepository,
+            UserRepository>();
+
+        builder.Services.AddScoped<
+            IHotelRepository,
+            HotelRepository>();
+
+        builder.Services.AddScoped<
+            IReviewRepository,
+            ReviewRepository>();
+
+        builder.Services.AddScoped<
+            IBookingRepository,
+            BookingRepository>();
+
+        builder.Services.AddScoped<
+            IRoomRepository,
+            RoomRepository>();
+
+        builder.Services.AddScoped<
+            IPaymentMethodRepository,
+            PaymentMethodRepository>();
 
         // ================= SERVICES =================
 
-        builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
-        builder.Services.AddScoped<IAuthService, AuthService>();
-        builder.Services.AddScoped<IRoomService, RoomService>();
-        builder.Services.AddScoped<IJwtService, JwtService>();
-        builder.Services.AddScoped<IHotelService, HotelService>();
-        builder.Services.AddScoped<IReviewService, ReviewService>();
-        builder.Services.AddScoped<IBookingService, BookingService>();
-        builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<IImageService, ImageService>();
+        builder.Services.AddScoped<
+            IPaymentMethodService,
+            PaymentMethodService>();
 
-        // EMAIL SERVICE
-        builder.Services.AddScoped<IEmailService, EmailService>();
+        builder.Services.AddScoped<
+            IAuthService,
+            AuthService>();
 
-        // CACHE
-        builder.Services.AddScoped<ICachingService, RedisCachingService>();
+        builder.Services.AddScoped<
+            IRoomService,
+            RoomService>();
+
+        builder.Services.AddScoped<
+            IJwtService,
+            JwtService>();
+
+        builder.Services.AddScoped<
+            IHotelService,
+            HotelService>();
+
+        builder.Services.AddScoped<
+            IReviewService,
+            ReviewService>();
+
+        builder.Services.AddScoped<
+            IBookingService,
+            BookingService>();
+
+        builder.Services.AddScoped<
+            IUserService,
+            UserService>();
+
+        builder.Services.AddScoped<
+            IImageService,
+            ImageService>();
+
+        builder.Services.AddScoped<
+            IAdminService,
+            AdminService>();
+
+        builder.Services.AddScoped<
+            IPdfService,
+            PdfService>();
+
+        // ================= EMAIL SERVICE =================
+
+        builder.Services.AddScoped<
+            IEmailService,
+            EmailService>();
+
+        // ================= CACHE =================
+
+        builder.Services.AddScoped<
+            ICachingService,
+            RedisCachingService>();
 
         // ================= APPLICATION =================
 

@@ -1,11 +1,10 @@
 ﻿using Booking.Application.DTOs.Auth;
-using Booking.Domain.Entities;
 
 namespace Booking.Application.Interfaces.Services;
 
 public interface IPaymentMethodService
 {
-    Task<List<PaymentMethod>> GetAsync(
+    Task<List<PaymentMethodDto>> GetAsync(
         Guid userId,
         CancellationToken cancellationToken);
 

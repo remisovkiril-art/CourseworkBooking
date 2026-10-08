@@ -65,4 +65,75 @@ public class UserRepository : IUserRepository
         await _context.SaveChangesAsync(
             cancellationToken);
     }
+
+    public async Task<List<UserTravelPreference>> GetTravelPreferencesAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _context.UserTravelPreferences
+            .Where(x => x.UserId == userId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task ReplaceTravelPreferencesAsync(
+        Guid userId,
+        List<UserTravelPreference> preferences,
+        CancellationToken cancellationToken)
+    {
+        List<UserTravelPreference> oldPreferences =
+            await _context.UserTravelPreferences
+                .Where(x => x.UserId == userId)
+                .ToListAsync(cancellationToken);
+
+        _context.UserTravelPreferences.RemoveRange(
+            oldPreferences);
+
+        await _context.UserTravelPreferences.AddRangeAsync(
+            preferences,
+            cancellationToken);
+
+        await _context.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task<NewsletterSubscription?> GetNewsletterAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _context.NewsletterSubscriptions
+            .FirstOrDefaultAsync(
+                x => x.UserId == userId,
+                cancellationToken);
+    }
+
+    public async Task SaveNewsletterAsync(
+        NewsletterSubscription newsletter,
+        CancellationToken cancellationToken)
+    {
+        NewsletterSubscription? existing =
+            await _context.NewsletterSubscriptions
+                .FirstOrDefaultAsync(
+                    x => x.UserId == newsletter.UserId,
+                    cancellationToken);
+
+        if (existing == null)
+        {
+            newsletter.Id = Guid.NewGuid();
+
+            await _context.NewsletterSubscriptions.AddAsync(
+                newsletter,
+                cancellationToken);
+        }
+        else
+        {
+            existing.Email = newsletter.Email;
+            existing.SeasonalOffers = newsletter.SeasonalOffers;
+            existing.FavoriteCities = newsletter.FavoriteCities;
+            existing.AcrossTheWorld = newsletter.AcrossTheWorld;
+            existing.AffordableTravel = newsletter.AffordableTravel;
+        }
+
+        await _context.SaveChangesAsync(
+            cancellationToken);
+    }
 }
