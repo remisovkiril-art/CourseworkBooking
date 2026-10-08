@@ -59,6 +59,18 @@ public class HotelRepository : IHotelRepository
         return await query.ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Hotel>?> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken)
+    {
+        return await _context.Hotels
+           .Where(h => ids.Contains(h.Id))
+                .Include(h => h.Images)
+                .Include(h => h.Reviews)
+                  .Include(x => x.Rooms)
+                    .ThenInclude(x => x.Bookings)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+    }
+
     public async Task<Hotel?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken)

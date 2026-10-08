@@ -185,6 +185,19 @@ public class HotelService : IHotelService
         };
     }
 
+
+public async Task<List<HotelFavoriteDto>?> GetFavoritesAsync(
+    List<Guid> ids,
+    CancellationToken cancellationToken)
+    {
+        var hotels = await _hotelRepository.GetByIdsAsync(
+            ids,
+            cancellationToken);
+
+
+        return _mapper.Map<List<HotelFavoriteDto>>(hotels);
+    }
+    
     public async Task<HotelDto?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken)

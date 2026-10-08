@@ -35,4 +35,7 @@ public interface IHotelRepository
     Task DeleteAsync(
         Guid id,
         CancellationToken cancellationToken);
+
+    Task<List<Hotel>?> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken);
+
 }

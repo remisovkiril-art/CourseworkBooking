@@ -8,6 +8,21 @@ public class HotelProfile : Profile
 {
     public HotelProfile()
     {
+        CreateMap<Hotel, HotelFavoriteDto>()
+            .ForMember(
+                dest => dest.Rating,
+                opt => opt.MapFrom(src =>
+                src.Reviews.Any()
+                ? src.Reviews.Average(x => x.Rating)
+                : 0))
+             .ForMember(
+                 dest => dest.Images,
+                 opt => opt.MapFrom(src =>
+                     src.Images.Select(x => x.ImageUrl).ToList()))
+             .ForMember(
+                 dest => dest.Rooms,
+                 opt => opt.MapFrom(src => src.Rooms));
+
         CreateMap<HotelCreateDto, Hotel>()
             .ForMember(
                 destination => destination.Id,

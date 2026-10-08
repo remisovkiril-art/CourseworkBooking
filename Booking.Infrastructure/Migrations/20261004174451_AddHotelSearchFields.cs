@@ -120,13 +120,6 @@ namespace Booking.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: false);
 
-            migrationBuilder.AddColumn<int>(
-                name: "Stars",
-                table: "Hotels",
-                type: "int",
-                nullable: false,
-                defaultValue: 0);
-
             migrationBuilder.CreateTable(
                 name: "NewsletterSubscriptions",
                 columns: table => new
@@ -255,9 +248,6 @@ namespace Booking.Infrastructure.Migrations
                 name: "NearStation",
                 table: "Hotels");
 
-            migrationBuilder.DropColumn(
-                name: "Stars",
-                table: "Hotels");
         }
     }
 }

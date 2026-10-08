@@ -31,4 +31,8 @@ public interface IHotelService
     Task<List<HotelDto>?> GetRandomAsync(
         int number,
         CancellationToken cancellationToken);
+
+    Task<List<HotelFavoriteDto>?> GetFavoritesAsync(
+    List<Guid> ids,
+    CancellationToken cancellationToken);
 }

@@ -192,4 +192,19 @@ public class HotelController : ControllerBase
             imageUrl = url
         });
     }
+
+    [HttpGet("favorites")]
+    public async Task<IActionResult> GetFavoriteHotels(
+    [FromQuery] List<Guid> ids,
+    CancellationToken cancellationToken)
+    {
+        var hotels = await _hotelService.GetFavoritesAsync(ids,cancellationToken);
+
+        if(hotels == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(hotels);
+    }
 }
