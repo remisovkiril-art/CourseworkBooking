@@ -431,6 +431,21 @@ namespace Booking.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.UserFavoriteHotel", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("HotelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("UserId", "HotelId");
+
+                    b.HasIndex("HotelId");
+
+                    b.ToTable("UserFavoriteHotels");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.UserTravelPreference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -557,6 +572,25 @@ namespace Booking.Infrastructure.Migrations
                     b.Navigation("Hotel");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.UserFavoriteHotel", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.Hotel", "Hotel")
+                        .WithMany("FavoriteUsers")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Booking.Domain.Entities.User", "User")
+                        .WithMany("FavoriteHotels")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.UserTravelPreference", b =>
                 {
                     b.HasOne("Booking.Domain.Entities.User", "User")
@@ -571,6 +605,8 @@ namespace Booking.Infrastructure.Migrations
             modelBuilder.Entity("Booking.Domain.Entities.Hotel", b =>
                 {
                     b.Navigation("Amenities");
+
+                    b.Navigation("FavoriteUsers");
 
                     b.Navigation("Images");
 
@@ -592,6 +628,8 @@ namespace Booking.Infrastructure.Migrations
             modelBuilder.Entity("Booking.Domain.Entities.User", b =>
                 {
                     b.Navigation("Bookings");
+
+                    b.Navigation("FavoriteHotels");
 
                     b.Navigation("NewsletterSubscription");
 

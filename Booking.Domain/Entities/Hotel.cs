@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Enum;
+using Booking.Domain.Enum;
 
 namespace Booking.Domain.Entities;
 
@@ -34,4 +34,6 @@ public class Hotel
     public ICollection<HotelAmenity> Amenities { get; set; } = new List<HotelAmenity>();
     public ICollection<HotelImage> Images { get; set; } = new List<HotelImage>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<UserFavoriteHotel> FavoriteUsers { get; set; } = new List<UserFavoriteHotel>();
 }
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Booking.Domain.Entities;
@@ -50,6 +50,7 @@ public class User
     public ICollection<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
 
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<UserFavoriteHotel> FavoriteHotels { get; set; } = new List<UserFavoriteHotel>();
 
     public ICollection<UserTravelPreference> TravelPreferences { get; set; } = new List<UserTravelPreference>();
 

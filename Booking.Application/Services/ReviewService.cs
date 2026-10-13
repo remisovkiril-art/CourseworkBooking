@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Repository;
 using Booking.Application.Interfaces.Services;
@@ -52,6 +52,32 @@ public class ReviewService : IReviewService
         return cache;
     }
 
+    public async Task<List<ReviewDto>> GetByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        List<Review> reviews = await _reviewRepository.GetByUserIdAsync(
+            userId, cancellationToken);
+
+        return reviews.Select(review => new ReviewDto
+        {
+            Id = review.Id,
+            HotelId = review.HotelId,
+            UserId = review.UserId,
+            HotelName = review.Hotel?.Name ?? string.Empty,
+            AuthorName = review.User?.Name ?? "User",
+            AuthorAvatarUrl = review.User?.AvatarUrl,
+            Text = review.Comment,
+            Rating = review.Rating,
+            Facilities = review.Facilities,
+            Staff = review.Staff,
+            Cleanliness = review.Cleanliness,
+            Comfort = review.Comfort,
+            Location = review.Location,
+            ValueForMoney = review.ValueForMoney,
+            CreatedAt = review.CreatedAt
+        }).ToList();
+    }
     public async Task<ReviewDto> AddAsync(
         Guid userId,
         CreateReviewDto dto,
@@ -130,6 +156,8 @@ public class ReviewService : IReviewService
         {
             Id = review.Id,
             HotelId = review.HotelId,
+            UserId = review.UserId,
+            HotelName = hotel.Name,
             AuthorName = "User",
             Text = review.Comment,
             Rating = review.Rating,
@@ -207,3 +235,5 @@ public class ReviewService : IReviewService
             cancellationToken);
     }
 }
+
+

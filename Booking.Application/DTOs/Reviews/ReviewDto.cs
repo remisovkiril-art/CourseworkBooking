@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 
 namespace Booking.Application.DTOs.Reviews;
 
@@ -6,6 +6,8 @@ public class ReviewDto
 {
     public Guid Id { get; set; }
     public Guid HotelId { get; set; }
+    public Guid UserId { get; set; }
+    public string HotelName { get; set; } = string.Empty;
     public string AuthorName { get; set; } = string.Empty;
     public string? AuthorAvatarUrl { get; set; }
     public string Text { get; set; } = string.Empty;

@@ -233,6 +233,10 @@ public class Program
             UserRepository>();
 
         builder.Services.AddScoped<
+            IFavoriteRepository,
+            FavoriteRepository>();
+
+        builder.Services.AddScoped<
             IHotelRepository,
             HotelRepository>();
 
@@ -285,6 +289,10 @@ public class Program
         builder.Services.AddScoped<
             IUserService,
             UserService>();
+
+        builder.Services.AddScoped<
+            IFavoriteService,
+            FavoriteService>();
 
         builder.Services.AddScoped<
             IImageService,

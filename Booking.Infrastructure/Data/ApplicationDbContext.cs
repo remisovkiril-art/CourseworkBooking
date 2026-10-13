@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Booking.Infrastructure.Data;
@@ -24,6 +24,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Room> Rooms => Set<Room>();
 
     public DbSet<Review> Reviews => Set<Review>();
+
+    public DbSet<UserFavoriteHotel> UserFavoriteHotels =>
+        Set<UserFavoriteHotel>();
 
     public DbSet<BookingEntity> Bookings =>
         Set<BookingEntity>();
@@ -82,6 +85,20 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<UserFavoriteHotel>()
+            .HasKey(x => new { x.UserId, x.HotelId });
+
+        modelBuilder.Entity<UserFavoriteHotel>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.FavoriteHotels)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserFavoriteHotel>()
+            .HasOne(x => x.Hotel)
+            .WithMany(x => x.FavoriteUsers)
+            .HasForeignKey(x => x.HotelId)
+            .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<NewsletterSubscription>()
             .HasOne(x => x.User)
             .WithOne(x => x.NewsletterSubscription)

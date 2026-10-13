@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +43,15 @@ public class ReviewController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+    {
+        List<ReviewDto> result = await _reviewService.GetByUserIdAsync(
+            GetUserId(), cancellationToken);
+
+        return Ok(result);
+    }
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create(

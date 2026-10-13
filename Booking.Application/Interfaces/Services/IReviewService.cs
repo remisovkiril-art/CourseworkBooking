@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs.Reviews;
+using Booking.Application.DTOs.Reviews;
 
 namespace Booking.Application.Interfaces.Services;
 
@@ -7,6 +7,8 @@ public interface IReviewService
     Task<List<ReviewDto>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken);
+
+    Task<List<ReviewDto>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 
     Task<ReviewDto> AddAsync(
         Guid userId,
@@ -21,3 +23,4 @@ public interface IReviewService
         Guid reviewId,
         CancellationToken cancellationToken);
 }
+

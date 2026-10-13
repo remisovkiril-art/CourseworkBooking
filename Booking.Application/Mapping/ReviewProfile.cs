@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Booking.Application.DTOs.Reviews;
 using Booking.Domain.Entities;
 
@@ -35,6 +35,8 @@ public class ReviewProfile : Profile
             );
 
         CreateMap<Review, ReviewDto>()
+            .ForMember(destination => destination.HotelName,
+                options => options.MapFrom(source => source.Hotel != null ? source.Hotel.Name : string.Empty))
             .ForMember(
                 destination => destination.AuthorName,
                 options => options.MapFrom(source =>
@@ -55,3 +57,4 @@ public class ReviewProfile : Profile
             );
     }
 }
+

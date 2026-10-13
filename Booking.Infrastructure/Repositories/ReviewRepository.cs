@@ -1,4 +1,4 @@
-﻿using Booking.Application.Interfaces.Repository;
+using Booking.Application.Interfaces.Repository;
 using Booking.Domain.Entities;
 using Booking.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +26,18 @@ public class ReviewRepository : IReviewRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<List<Review>> GetByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return _context.Reviews
+            .AsNoTracking()
+            .Include(x => x.User)
+            .Include(x => x.Hotel)
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
     public async Task<Review?> GetByIdAsync(
         Guid reviewId,
         CancellationToken cancellationToken)
@@ -81,3 +93,4 @@ public class ReviewRepository : IReviewRepository
             cancellationToken);
     }
 }
+

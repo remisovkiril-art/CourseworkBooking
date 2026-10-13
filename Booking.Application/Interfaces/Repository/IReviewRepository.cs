@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 
 namespace Booking.Application.Interfaces.Repository;
 
@@ -7,6 +7,8 @@ public interface IReviewRepository
     Task<List<Review>> GetByHotelIdAsync(
         Guid hotelId,
         CancellationToken cancellationToken);
+
+    Task<List<Review>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 
     Task<Review?> GetByIdAsync(
         Guid reviewId,
@@ -24,3 +26,4 @@ public interface IReviewRepository
         Guid reviewId,
         CancellationToken cancellationToken);
 }
+

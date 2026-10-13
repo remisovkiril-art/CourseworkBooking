@@ -19,8 +19,9 @@ public class HotelRepository : IHotelRepository
         CancellationToken cancellationToken)
     {
         return await _context.Hotels
+            .AsNoTracking()
             .AsSplitQuery()
-            .Include(h => h.HotelChain)
+            .Include(x => x.HotelChain)
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
@@ -34,26 +35,25 @@ public class HotelRepository : IHotelRepository
         HotelSearchDto dto,
         CancellationToken cancellationToken)
     {
-        IQueryable<Hotel> query =
-            _context.Hotels
-                .AsNoTracking()
-                .Include(x => x.Rooms)
-                    .ThenInclude(x => x.Bookings)
-                .Include(x => x.Amenities)
-                .Include(x => x.Images)
-                .Include(x => x.Reviews)
-                    .ThenInclude(x => x.User)
-                .Include(x => x.HotelChain)
-                .AsSplitQuery();
+        IQueryable<Hotel> query = _context.Hotels
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.HotelChain)
+            .Include(x => x.Rooms)
+                .ThenInclude(x => x.Bookings)
+            .Include(x => x.Amenities)
+            .Include(x => x.Images)
+            .Include(x => x.Reviews)
+                .ThenInclude(x => x.User);
 
         if (!string.IsNullOrWhiteSpace(dto.Search))
         {
             string search = dto.Search.Trim();
+            string pattern = search + "%";
 
             query = query.Where(x =>
-                EF.Functions.Like(
-                    x.Name,
-                    search + "%"));
+                x.Name != null &&
+                EF.Functions.Like(x.Name, pattern));
         }
 
         return await query.ToListAsync(cancellationToken);
@@ -65,14 +65,14 @@ public class HotelRepository : IHotelRepository
     {
         return await _context.Hotels
             .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.HotelChain)
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
             .Include(x => x.Images)
             .Include(x => x.Reviews)
                 .ThenInclude(x => x.User)
-            .Include(x => x.HotelChain)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(
                 x => x.Id == id,
                 cancellationToken);
@@ -86,8 +86,7 @@ public class HotelRepository : IHotelRepository
             hotel,
             cancellationToken);
 
-        await _context.SaveChangesAsync(
-            cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(
@@ -96,8 +95,7 @@ public class HotelRepository : IHotelRepository
     {
         _context.Hotels.Update(hotel);
 
-        await _context.SaveChangesAsync(
-            cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddImageAsync(
@@ -108,24 +106,30 @@ public class HotelRepository : IHotelRepository
             image,
             cancellationToken);
 
-        await _context.SaveChangesAsync(
-            cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<List<Hotel>?> GetRandomHotelsAsync(
         int number,
         CancellationToken cancellationToken)
     {
+        if (number <= 0)
+        {
+            return new List<Hotel>();
+        }
+
         return await _context.Hotels
+            .AsNoTracking()
+            .AsSplitQuery()
             .OrderBy(x => Guid.NewGuid())
             .Take(number)
+            .Include(x => x.HotelChain)
             .Include(x => x.Rooms)
                 .ThenInclude(x => x.Bookings)
             .Include(x => x.Amenities)
             .Include(x => x.Images)
             .Include(x => x.Reviews)
                 .ThenInclude(x => x.User)
-            .Include(x => x.HotelChain)
             .ToListAsync(cancellationToken);
     }
 
@@ -133,11 +137,10 @@ public class HotelRepository : IHotelRepository
         Guid id,
         CancellationToken cancellationToken)
     {
-        Hotel? hotel =
-            await _context.Hotels
-                .FirstOrDefaultAsync(
-                    x => x.Id == id,
-                    cancellationToken);
+        Hotel? hotel = await _context.Hotels
+            .FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken);
 
         if (hotel == null)
         {
@@ -146,7 +149,6 @@ public class HotelRepository : IHotelRepository
 
         _context.Hotels.Remove(hotel);
 
-        await _context.SaveChangesAsync(
-            cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

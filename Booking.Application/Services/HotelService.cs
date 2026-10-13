@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Booking.Application.DTOs.Hotels;
 using Booking.Application.DTOs.Reviews;
 using Booking.Application.DTOs.Rooms;
@@ -504,6 +504,8 @@ public class HotelService : IHotelService
                 {
                     Id = x.Id,
                     HotelId = x.HotelId,
+                    UserId = x.UserId,
+                    HotelName = hotel.Name,
                     AuthorName = x.User?.Name ?? "User",
                     AuthorAvatarUrl = x.User?.AvatarUrl,
                     Text = x.Comment,
