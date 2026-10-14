@@ -378,4 +378,23 @@ public class AuthService : IAuthService
     {
         return Random.Shared.Next(100000, 1000000).ToString();
     }
+
+    public async Task<string?> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        User? user = await _userRepository.GetByRefreshTokenAsync(
+            refreshToken,
+            cancellationToken);
+
+        if (user == null ||
+            string.IsNullOrWhiteSpace(user.RefreshToken) ||
+            user.RefreshTokenExpiryTime == null ||
+            user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        return _jwtService.GenerateAccessToken(user);
+    }
 }

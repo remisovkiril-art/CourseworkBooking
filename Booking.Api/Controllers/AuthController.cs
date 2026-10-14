@@ -241,5 +241,24 @@ public class AuthController : ControllerBase
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
     }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> GetRefreshToken(CancellationToken cancellationToken)
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return Unauthorized();
+
+        var result = await _authService.RefreshTokenAsync(refreshToken, cancellationToken);
+
+
+        if (result == null)
+            return Unauthorized();
+
+        return Ok(new
+        {
+            accessToken = result
+        });
+    }
 }
 

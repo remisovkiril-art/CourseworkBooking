@@ -28,4 +28,6 @@ public interface IAuthService
     Task ResetPasswordAsync(
         ResetPasswordDto dto,
         CancellationToken cancellationToken);
+
+    Task<string?> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
 }
