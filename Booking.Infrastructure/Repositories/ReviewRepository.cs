@@ -65,11 +65,16 @@ public class ReviewRepository : IReviewRepository
         int count,
         CancellationToken cancellationToken)
     {
-        return await _context.Reviews
+        var reviews = await _context.Reviews
             .Include(r => r.User)
             .OrderByDescending(r => r.Rating)
-            .Take(count)
+            .ThenByDescending(r => r.Id)
             .ToListAsync(cancellationToken);
+
+        return reviews
+            .DistinctBy(r => r.UserId)
+            .Take(count)
+            .ToList();
     }
 
     public async Task DeleteAsync(

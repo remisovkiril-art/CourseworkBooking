@@ -119,18 +119,18 @@ public class HotelRepository : IHotelRepository
         }
 
         return await _context.Hotels
-            .AsNoTracking()
-            .AsSplitQuery()
-            .OrderBy(x => Guid.NewGuid())
-            .Take(number)
-            .Include(x => x.HotelChain)
-            .Include(x => x.Rooms)
-                .ThenInclude(x => x.Bookings)
-            .Include(x => x.Amenities)
-            .Include(x => x.Images)
-            .Include(x => x.Reviews)
-                .ThenInclude(x => x.User)
-            .ToListAsync(cancellationToken);
+        .AsNoTracking()
+        .Include(h => h.HotelChain)
+        .Include(h => h.Images)
+        .Include(h => h.Rooms)
+            .ThenInclude(r => r.Bookings)
+        .Include(h => h.Amenities)
+        .Include(h => h.Reviews)
+            .ThenInclude(r => r.User)
+        .OrderBy(_ => Guid.NewGuid())
+        .Take(number)
+        .ToListAsync(cancellationToken);
+
     }
 
     public async Task DeleteAsync(
